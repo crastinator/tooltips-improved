@@ -34,7 +34,7 @@ The wheel only moves a tooltip along a direction it doesn't fit in, and otherwis
 
 ## Config
 
-Every option has an in-game settings screen. On Fabric, open it from [Mod Menu](https://modrinth.com/mod/modmenu) (optional) by selecting Tooltips Improved and clicking the settings button. On NeoForge and Forge, use the Config button in the Mods list. Changes apply immediately and are saved to `config/tooltipsimproved.json`, which can also be edited by hand.
+Every option has an in-game settings screen. On Fabric, open it from [Mod Menu](https://modrinth.com/mod/modmenu) (optional) by selecting Tooltips Improved and clicking the settings button. On NeoForge, use the Config button in the Mods list. Changes apply immediately and are saved to `config/tooltipsimproved.json`, which can also be edited by hand.
 
 | Option | Default | |
 |--------|---------|-|
@@ -69,16 +69,15 @@ The feature set is inspired by [Better Trim Tooltips](https://modrinth.com/mod/b
 | 26.2      | ✔      | ✔        |
 | 26.3      | ✔      | ✔        |
 
-Forge (1.21.1–26.3) is postponed. The setup is still in the repo; pass `-Pforge` to Gradle to include those targets.
+Forge support is a work in progress.
 
 Built with [Stonecutter](https://stonecutter.kikugie.dev/) from one source tree. Edit `settings.gradle.kts` to add or drop versions, and `stonecutter.properties.toml` for per-version dependency numbers.
 
 ## Working with it
 
 - Switch the active version/loader with the Stonecutter Gradle tasks (`Set active project to …`) or by changing `stonecutter active` in `stonecutter.gradle.kts`. This rewrites the source tree for that target, so switch back to the VCS version (`26.3-fabric`) before committing.
-- Version-specific code uses Stonecutter comments, e.g. `//? if forge {` or `//? if >=1.21.5 {`.
-- Build one target: `./gradlew :26.3-forge:build`. Run `buildAndCollect` on a target to copy its jars into `build/libs/<mod version>/`.
-- Forge targets only exist with `-Pforge`, e.g. `./gradlew -Pforge :26.3-forge:build`. Forge uses ForgeGradle 7, which decompiles every Forge version while configuring, so the first such run takes a long time. Its dev launcher also downloads its own copy of the game assets and prefers IPv6; if that fails, set `JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true`.
+- Version-specific code uses Stonecutter comments, e.g. `//? if fabric {` or `//? if >=1.21.5 {`.
+- Build one target: `./gradlew :26.3-fabric:build`. Run `buildAndCollect` on a target to copy its jars into `build/libs/<mod version>/`.
 - `runClient -Pmodmenu` (Fabric) adds Mod Menu and Fabric API to the dev game, to try the settings screen from Mod Menu.
 - `runClient -Pselftest` starts the game, runs the in-game checks in `SelfTest` on the title screen, logs `PASS`/`FAIL` per check, and quits.
 
@@ -96,7 +95,7 @@ Other pieces:
 - Background opacity: `TooltipBackground` and `mixin/TooltipBackgroundMixin`.
 - Button tooltips: `mixin/WidgetTooltipHolderMixin` and `mixin/TooltipMixin`.
 - Keybinds: added to the vanilla list by `mixin/OptionsMixin`, so no loader keybind API is needed.
-- Settings screen: `TooltipsImprovedScreen`, built from vanilla's options widgets. It's hooked into Mod Menu by `TooltipsImprovedModMenu` and into the NeoForge and Forge mod lists in `TooltipsImprovedNeoForge` and `TooltipsImprovedForge`.
+- Settings screen: `TooltipsImprovedScreen`, built from vanilla's options widgets. It's hooked into Mod Menu by `TooltipsImprovedModMenu` and into NeoForge's mod list in `TooltipsImprovedNeoForge`.
 
 Only plain Mixin features are used (no MixinExtras), so every hook behaves the same on all three loaders.
 
