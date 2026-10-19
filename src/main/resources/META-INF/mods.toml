@@ -9,7 +9,7 @@ clientSideOnly=true
 modId = "${id}"
 displayName = "${name}"
 version = "${version}"
-authors = "varas"
+authors = "crastinator"
 description = "Folds armor trim tooltips to one line (hold Shift for the full lines) and lets you scroll tooltips too big for the screen."
 
 logoFile = "assets/tooltipsimproved/icon.png"

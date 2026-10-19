@@ -8,7 +8,7 @@ loaderVersion="[1,)"
 modId = "${id}"
 displayName = "${name}"
 version = "${version}"
-authors = "varas"
+authors = "crastinator"
 description = "Folds armor trim tooltips to one line (hold Shift for the full lines) and lets you scroll tooltips too big for the screen."
 
 # logoFile before 26.1, iconFile (square icons) after; set by the build
