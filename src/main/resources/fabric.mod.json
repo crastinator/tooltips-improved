@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+  "name": "${name}",
+  "description": "Folds armor trim tooltips to one line (hold Shift for the full lines) and lets you scroll tooltips too big for the screen.",
+  "authors": [
+    "varas"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/project/tooltips-improved",
+    "sources": "https://github.com/crastinator/tooltips-improved",
+    "issues": "https://github.com/crastinator/tooltips-improved/issues"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/tooltipsimproved/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.tooltipsimproved.TooltipsImprovedFabric"
+    ],
+    "modmenu": [
+      "com.tooltipsimproved.TooltipsImprovedModMenu"
+    ]
+  },
+  "mixins": [
+    "tooltipsimproved.mixins.json"
+  ],
+  "accessWidener": "tooltipsimproved.ct",
+  "suggests": {
+    "modmenu": "*"
+  },
+  "depends": {
+    "fabricloader": ">=${loader}",
+    "minecraft": "${minecraft}"
+  }
+}

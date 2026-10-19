@@ -1,0 +1,31 @@
+license = "CC0-1.0"
+issueTrackerURL = "https://github.com/crastinator/tooltips-improved/issues"
+
+modLoader="javafml"
+loaderVersion="[${forge},)"
+clientSideOnly=true
+
+[[mods]]
+modId = "${id}"
+displayName = "${name}"
+version = "${version}"
+authors = "varas"
+description = "Folds armor trim tooltips to one line (hold Shift for the full lines) and lets you scroll tooltips too big for the screen."
+
+logoFile = "assets/tooltipsimproved/icon.png"
+displayTest = "IGNORE_ALL_VERSION"
+displayURL = "https://modrinth.com/project/tooltips-improved"
+
+[[dependencies.${id}]]
+modId = "forge"
+mandatory = true
+versionRange = "[${forge},)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${id}]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft}"
+ordering = "NONE"
+side = "CLIENT"

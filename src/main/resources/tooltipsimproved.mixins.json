@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tooltipsimproved.mixin",
+  "compatibilityLevel": "${java}",
+  "client": [
+    "ArmorTrimMixin",
+    "ClientTextTooltipAccessor",
+    "KeyMappingAccessor",
+    "MouseHandlerMixin",
+    "OptionsMixin",
+    "RecipeBookComponentAccessor",
+    "ScreenMixin",
+    "TitleScreenMixin",
+    "TooltipBackgroundMixin",
+    "TooltipMixin",
+    "TooltipRenderMixin",
+    "WidgetTooltipHolderMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
