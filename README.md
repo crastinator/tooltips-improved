@@ -97,6 +97,6 @@ Other pieces:
 - Keybinds: added to the vanilla list by `mixin/OptionsMixin`, so no loader keybind API is needed.
 - Settings screen: `TooltipsImprovedScreen`, built from vanilla's options widgets. It's hooked into Mod Menu by `TooltipsImprovedModMenu` and into NeoForge's mod list in `TooltipsImprovedNeoForge`.
 
-Only plain Mixin features are used (no MixinExtras), so every hook behaves the same on all three loaders.
+Hooks use plain Mixin features, except the background hook before 1.21.6, which uses MixinExtras' `@WrapMethod` on Fabric and NeoForge (both ship MixinExtras).
 
 Stonecutter guide: https://stonecutter.kikugie.dev/wiki/start/

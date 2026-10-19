@@ -92,6 +92,7 @@ tasks {
         val props = buildMap {
             register("id", sc.properties["mod.id"])
             register("name", sc.properties["mod.name"])
+            register("authors", sc.properties["mod.authors"])
             register("version", sc.properties["mod.version"])
             register("minecraft", sc.properties["mod.mc_compat"])
             register("forge", Regex("^\\d+").find(sc.properties.get<String>("deps.forge"))!!.value)

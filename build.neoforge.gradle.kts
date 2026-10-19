@@ -76,6 +76,7 @@ tasks {
         val props = buildMap {
             register("id", sc.properties["mod.id"])
             register("name", sc.properties["mod.name"])
+            register("authors", sc.properties["mod.authors"])
             register("version", sc.properties["mod.version"])
             register("minecraft", sc.properties["mod.mc_compat"])
             // NeoForge 26.1+ shows a warning screen for the old key

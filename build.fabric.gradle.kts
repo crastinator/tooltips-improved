@@ -101,6 +101,7 @@ tasks {
         val props = buildMap {
             register("id", sc.properties["mod.id"])
             register("name", sc.properties["mod.name"])
+            register("authors", sc.properties["mod.authors"])
             register("version", sc.properties["mod.version"])
             register("minecraft", sc.properties["mod.mc_compat"])
             register("loader", Regex("\\d+\\.\\d+").find(sc.properties.get<String>("deps.fabric_loader"))!!.value)

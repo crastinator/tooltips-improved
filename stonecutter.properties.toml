@@ -1,6 +1,7 @@
 # See https://stonecutter.kikugie.dev/wiki/config/properties#centralized-properties
 mod.id = "tooltipsimproved"
 mod.name = "Tooltips Improved"
+mod.authors = "crastinator"
 mod.group = "com.tooltipsimproved"
 mod.version = "0.1.0"
 
