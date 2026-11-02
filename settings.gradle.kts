@@ -22,7 +22,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-// Forge is postponed: its targets are only set up with `-Pforge`.
+// Forge targets are only set up with `-Pforge`.
 // ForgeGradle decompiles every Forge version while configuring, which is slow on a fresh cache.
 val withForge = providers.gradleProperty("forge").isPresent
 
