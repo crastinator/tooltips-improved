@@ -12,7 +12,7 @@
     "sources": "https://github.com/crastinator/tooltips-improved",
     "issues": "https://github.com/crastinator/tooltips-improved/issues"
   },
-  "license": "CC0-1.0",
+  "license": "MIT",
   "icon": "assets/tooltipsimproved/icon.png",
   "environment": "client",
   "entrypoints": {
