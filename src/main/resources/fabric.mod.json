@@ -3,7 +3,7 @@
   "id": "${id}",
   "version": "${version}",
   "name": "${name}",
-  "description": "Folds armor trim tooltips to one line (hold Shift for the full lines) and lets you scroll tooltips too big for the screen.",
+  "description": "Makes tooltips readable and more useful: wraps, repositions and scrolls long tooltips, folds armor trims, and adds exact durability, equipment comparison, and previews of books, maps, banners and fireworks.",
   "authors": [
     "${authors}"
   ],

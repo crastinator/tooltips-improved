@@ -22,7 +22,7 @@ import net.minecraft.world.item.armortrim.TrimPattern;
 public class TooltipsImproved {
     public static final String MOD_ID = "tooltipsimproved";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-    public static final String VERSION = /*$ mod_version*/ "0.1.0";
+    public static final String VERSION = /*$ mod_version*/ "0.2.0";
     public static final String MINECRAFT = /*$ minecraft*/ "26.3";
 
     public static void init() {
