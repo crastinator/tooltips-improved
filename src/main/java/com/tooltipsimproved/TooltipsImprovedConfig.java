@@ -25,6 +25,9 @@ public final class TooltipsImprovedConfig {
     public static final int MIN_WHEEL_STEP = 1, MAX_WHEEL_STEP = 50;
     public static final int MIN_KEY_SPEED = 10, MAX_KEY_SPEED = 1000;
     public static final double MIN_SMOOTHNESS = 0.05;
+    // A written book's page holds at most 14 lines
+    public static final int MIN_BOOK_LINES = 1, MAX_BOOK_LINES = 14;
+    public static final int MIN_MAP_SIZE = 32, MAX_MAP_SIZE = 256;
 
     /** Show armor trims on one line. */
     public boolean foldTrims = true;
@@ -64,6 +67,59 @@ public final class TooltipsImprovedConfig {
     public int keySpeed = 300;
     /** Share of the way the tooltip glides toward its target per frame at 60 FPS, from 0.05 (gliding) to 1 (instant). */
     public double smoothness = 0.25;
+
+    public Durability durability = new Durability();
+
+    /** The durability line in item tooltips. */
+    public static final class Durability {
+        public boolean enabled = true;
+        public DurabilityShowWhen showWhen = DurabilityShowWhen.WHEN_DAMAGED;
+        public DurabilityFormat format = DurabilityFormat.FRACTION;
+        /** Color the numbers like vanilla's durability bar. */
+        public boolean colorByRemaining = true;
+    }
+
+    public Comparison comparison = new Comparison();
+
+    /** The stat differences against equipped items in item tooltips. */
+    public static final class Comparison {
+        public boolean enabled = true;
+        public ShowWhen showWhen = ShowWhen.ALWAYS;
+        /** Show nothing rather than an empty comparison when every stat matches. */
+        public boolean hideIdentical = true;
+    }
+
+    public Previews previews = new Previews();
+
+    /** Pictures of what an item holds, in its tooltip. */
+    public static final class Previews {
+        public boolean books = true;
+        /** Lines of a book's first page to show. */
+        public int bookLines = 6;
+        public boolean maps = true;
+        /** Width and height of a map in pixels. */
+        public int mapSize = 64;
+        public boolean banners = true;
+        public boolean fireworks = true;
+        public ShowWhen showWhen = ShowWhen.ALWAYS;
+    }
+
+    public enum ShowWhen {
+        ALWAYS,
+        SHIFT_HELD
+    }
+
+    public enum DurabilityShowWhen {
+        ALWAYS,
+        WHEN_DAMAGED,
+        SHIFT_HELD
+    }
+
+    public enum DurabilityFormat {
+        FRACTION,
+        PERCENT,
+        BOTH
+    }
 
     public enum WrapMode {
         /** Never wrap. */
@@ -129,6 +185,16 @@ public final class TooltipsImprovedConfig {
         // Unknown enum names in the file come back as null
         if (config.wrap == null) config.wrap = defaults.wrap;
         if (config.placement == null) config.placement = defaults.placement;
+        // So does a section set to null by hand
+        if (config.durability == null) config.durability = defaults.durability;
+        if (config.durability.showWhen == null) config.durability.showWhen = defaults.durability.showWhen;
+        if (config.durability.format == null) config.durability.format = defaults.durability.format;
+        if (config.comparison == null) config.comparison = defaults.comparison;
+        if (config.comparison.showWhen == null) config.comparison.showWhen = defaults.comparison.showWhen;
+        if (config.previews == null) config.previews = defaults.previews;
+        if (config.previews.showWhen == null) config.previews.showWhen = defaults.previews.showWhen;
+        config.previews.bookLines = Mth.clamp(config.previews.bookLines, MIN_BOOK_LINES, MAX_BOOK_LINES);
+        config.previews.mapSize = Mth.clamp(config.previews.mapSize, MIN_MAP_SIZE, MAX_MAP_SIZE);
         config.wrapWidth = Mth.clamp(config.wrapWidth, MIN_WRAP_WIDTH, MAX_WRAP_WIDTH);
         config.backgroundOpacity = clamp(config.backgroundOpacity, 0.0, 1.0, defaults.backgroundOpacity);
         config.wheelStep = Mth.clamp(config.wheelStep, MIN_WHEEL_STEP, MAX_WHEEL_STEP);

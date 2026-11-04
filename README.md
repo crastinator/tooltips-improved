@@ -30,6 +30,12 @@ This shows `Sentry Armor Trim (Iron)` instead: the pattern in gray, the material
 
 The wheel only moves a tooltip along a direction it doesn't fit in, and otherwise keeps scrolling the screen as usual. Keys are rebindable under Controls → Inventory, to keys or mouse buttons, and there's an unbound "Reset Tooltip Position" key. The tooltip glides into place, starts back in place when you hover something else, and resets when its screen closes. Sideways movement uses Left Alt rather than Tooltip Scroll's Shift, because Shift expands tooltips here (and Ctrl is Sprint).
 
+**Exact durability.** Damaged items show `Durability: 312 / 1561`, as a fraction, a percentage or both, with the numbers colored like the durability bar. It stays out of the way when F3+H already shows vanilla's line, and on unbreakable items.
+
+**Equipment comparison.** Armor, weapons and tools show how their stats differ from what you have equipped, under a `Compared to equipped: Iron Sword` line: `+1 Attack Damage` in green, `-0.4 Attack Speed` in red. Amounts match what vanilla's tooltips show, so they add up with the numbers above them. Enchantments aren't compared yet.
+
+**Content previews.** Written books show the start of their first page, filled maps their image (or "Map not loaded" if the server hasn't sent it), banners and shields their pattern, and firework stars and rockets icons for each explosion's shape, colors and fade colors.
+
 **Looks.** The background can be made see-through so it covers less of the inventory, and the extra gap under the first line can be removed.
 
 ## Config
@@ -39,6 +45,20 @@ Every option has an in-game settings screen. On Fabric, open it from [Mod Menu](
 | Option | Default | |
 |--------|---------|-|
 | `foldTrims` | `true` | Show armor trims on one line |
+| `durability.enabled` | `true` | Show the durability line |
+| `durability.showWhen` | `WHEN_DAMAGED` | `ALWAYS`, `WHEN_DAMAGED`, or `SHIFT_HELD` |
+| `durability.format` | `FRACTION` | `FRACTION`, `PERCENT`, or `BOTH` |
+| `durability.colorByRemaining` | `true` | Color the numbers like the durability bar |
+| `comparison.enabled` | `true` | Compare armor, weapons and tools to what's equipped |
+| `comparison.showWhen` | `ALWAYS` | `ALWAYS` or `SHIFT_HELD` |
+| `comparison.hideIdentical` | `true` | Show nothing when every stat matches |
+| `previews.books` | `true` | Preview a written book's first page |
+| `previews.bookLines` | `6` | Lines of the page to show, 1 to 14 |
+| `previews.maps` | `true` | Preview a filled map |
+| `previews.mapSize` | `64` | Map width and height in pixels, 32 to 256 |
+| `previews.banners` | `true` | Preview a banner's or shield's pattern |
+| `previews.fireworks` | `true` | Show icons for a firework's explosions |
+| `previews.showWhen` | `ALWAYS` | `ALWAYS` or `SHIFT_HELD` |
 | `wrap` | `CURSOR` | `OFF`, `CURSOR` (fit beside the cursor), `SCREEN` (only what wouldn't fit on the screen at all), `HALF_SCREEN`, or `FIXED` |
 | `wrapWidth` | `200` | Width in pixels for `FIXED` |
 | `unwrapButtonTooltips` | `false` | Skip vanilla's 170 pixel wrap on button tooltips |
@@ -90,6 +110,8 @@ Every tooltip goes through one vanilla method, hooked in `mixin/TooltipRenderMix
 
 Other pieces:
 
+- Added tooltip lines: `mixin/ItemStackMixin` calls `TooltipExtras`, which adds `TooltipDurability` and `TooltipComparison`. `TooltipComparison.deltas` is the pure stat calculation.
+- Previews: `TooltipPreviews` holds a data record and renderer per type, `PreviewCanvas` holds the drawing that changes between versions, and `mixin/ItemStackMixin` and `mixin/ClientTooltipComponentMixin` connect them to vanilla's tooltip images. These use mixins rather than loader events so Fabric API stays unneeded.
 - Trim folding: `TooltipsImproved.trimLine` and `mixin/ArmorTrimMixin`.
 - Background opacity: `TooltipBackground` and `mixin/TooltipBackgroundMixin`.
 - Button tooltips: `mixin/WidgetTooltipHolderMixin` and `mixin/TooltipMixin`.

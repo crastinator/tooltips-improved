@@ -6,6 +6,8 @@
   "client": [
     "ArmorTrimMixin",
     "ClientTextTooltipAccessor",
+    "ClientTooltipComponentMixin",
+    "ItemStackMixin",
     "KeyMappingAccessor",
     "MouseHandlerMixin",
     "OptionsMixin",

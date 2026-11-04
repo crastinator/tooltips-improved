@@ -1,5 +1,6 @@
 package com.tooltipsimproved.mixin;
 
+import com.tooltipsimproved.TooltipPreviews;
 import com.tooltipsimproved.TooltipScroll;
 import com.tooltipsimproved.TooltipWrap;
 import net.minecraft.client.gui.screens.Screen;
@@ -14,5 +15,6 @@ public abstract class ScreenMixin {
     private void tooltipsimproved$forgetTooltips(CallbackInfo ci) {
         TooltipScroll.reset();
         TooltipWrap.clearCache();
+        TooltipPreviews.clearCache();
     }
 }

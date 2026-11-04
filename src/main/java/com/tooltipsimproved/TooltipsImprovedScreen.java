@@ -32,6 +32,32 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
         section("trims");
         list.addBig(toggle("foldTrims", config.foldTrims, value -> config.foldTrims = value));
 
+        section("durability");
+        TooltipsImprovedConfig.Durability durability = config.durability;
+        list.addSmall(
+            toggle("durability.enabled", durability.enabled, value -> durability.enabled = value),
+            choice("durability.showWhen", TooltipsImprovedConfig.DurabilityShowWhen.values(), durability.showWhen, value -> durability.showWhen = value),
+            choice("durability.format", TooltipsImprovedConfig.DurabilityFormat.values(), durability.format, value -> durability.format = value),
+            toggle("durability.colorByRemaining", durability.colorByRemaining, value -> durability.colorByRemaining = value));
+
+        section("comparison");
+        TooltipsImprovedConfig.Comparison comparison = config.comparison;
+        list.addSmall(
+            toggle("comparison.enabled", comparison.enabled, value -> comparison.enabled = value),
+            choice("comparison.showWhen", TooltipsImprovedConfig.ShowWhen.values(), comparison.showWhen, value -> comparison.showWhen = value),
+            toggle("comparison.hideIdentical", comparison.hideIdentical, value -> comparison.hideIdentical = value));
+
+        section("previews");
+        TooltipsImprovedConfig.Previews previews = config.previews;
+        list.addSmall(
+            choice("previews.showWhen", TooltipsImprovedConfig.ShowWhen.values(), previews.showWhen, value -> previews.showWhen = value),
+            toggle("previews.books", previews.books, value -> previews.books = value),
+            slider("previews.bookLines", TooltipsImprovedConfig.MIN_BOOK_LINES, TooltipsImprovedConfig.MAX_BOOK_LINES, previews.bookLines, value -> previews.bookLines = value),
+            toggle("previews.maps", previews.maps, value -> previews.maps = value),
+            slider("previews.mapSize", TooltipsImprovedConfig.MIN_MAP_SIZE, TooltipsImprovedConfig.MAX_MAP_SIZE, previews.mapSize, value -> previews.mapSize = value),
+            toggle("previews.banners", previews.banners, value -> previews.banners = value),
+            toggle("previews.fireworks", previews.fireworks, value -> previews.fireworks = value));
+
         section("wrapping");
         list.addSmall(
             choice("wrap", TooltipsImprovedConfig.WrapMode.values(), config.wrap, value -> config.wrap = value),

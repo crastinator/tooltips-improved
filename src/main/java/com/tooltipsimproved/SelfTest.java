@@ -14,7 +14,24 @@ import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
+import net.minecraft.world.level.block.entity.BannerPatterns;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import org.joml.Vector2i;
 import org.joml.Vector2ic;
@@ -71,6 +88,30 @@ public final class SelfTest {
             List<Component> lines = trimTooltip();
             require(lines.size() == 3, "got " + lines.size() + " lines");
         }));
+        check("durability line formats and colors", () -> withField(() -> {
+            config.durability.enabled = true;
+            config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.WHEN_DAMAGED;
+            config.durability.format = TooltipsImprovedConfig.DurabilityFormat.BOTH;
+            config.durability.colorByRemaining = true;
+        }, SelfTest::checkDurabilityLine));
+        check("durability line is skipped when it should be", () -> withField(() -> {
+            config.durability.enabled = true;
+            config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.ALWAYS;
+        }, SelfTest::checkDurabilitySkipped));
+        check("durability percent stays honest at the ends", () -> {
+            require(TooltipDurability.percent(1, 1561) == 1, "one use left read as 0%");
+            require(TooltipDurability.percent(1560, 1561) == 99, "a damaged item read as 100%");
+            require(TooltipDurability.percent(312, 1561) == 20, "312 / 1561");
+        });
+        check("comparison deltas use vanilla's basis", SelfTest::checkComparisonDeltas);
+        check("comparison picks the right slot", SelfTest::checkComparisonSlot);
+        check("comparison lines read and color correctly", () -> withField(() -> config.comparison.hideIdentical = true, SelfTest::checkComparisonLines));
+        check("previews appear for what they should", () -> withField(() -> {
+            config.previews = new TooltipsImprovedConfig.Previews();
+            config.wrap = TooltipsImprovedConfig.WrapMode.SCREEN;
+        }, SelfTest::checkPreviews));
+        check("previews respect their settings", () -> withField(() -> config.previews = new TooltipsImprovedConfig.Previews(), SelfTest::checkPreviewSettings));
+        check("previews report their size and survive wrapping", () -> withField(() -> config.previews = new TooltipsImprovedConfig.Previews(), SelfTest::checkPreviewSizes));
         check("wrap splits wide lines and keeps style", () -> withField(() -> config.wrap = TooltipsImprovedConfig.WrapMode.SCREEN,
             SelfTest::checkWrap));
         check("wrap off leaves lines alone", () -> withField(() -> config.wrap = TooltipsImprovedConfig.WrapMode.OFF, () -> {
@@ -261,7 +302,7 @@ public final class SelfTest {
 
     // Loading a class applies its mixins, which throw here if a target no longer matches
     private static void loadMixinTargets() throws ClassNotFoundException {
-        for (Class<?> target : List.of(ArmorTrim.class, ClientTextTooltip.class, KeyMapping.class,
+        for (Class<?> target : List.of(ArmorTrim.class, ClientTextTooltip.class, ClientTooltipComponent.class, KeyMapping.class, ItemStack.class,
             net.minecraft.client.MouseHandler.class, net.minecraft.client.Options.class,
             net.minecraft.client.gui.screens.Screen.class, net.minecraft.client.gui.screens.TitleScreen.class,
             //? if >=26.1 {
@@ -288,12 +329,38 @@ public final class SelfTest {
         return screen;
     }
 
-    private static List<Component> trimTooltip() {
+    private static HolderLookup.Provider registries() {
         //? if >=26.3 {
-        HolderLookup.Provider registries = VanillaRegistries.createWorldLookup();
+        return VanillaRegistries.createWorldLookup();
         //?} else {
-        /*HolderLookup.Provider registries = VanillaRegistries.createLookup();
+        /*return VanillaRegistries.createLookup();
         *///?}
+    }
+
+    /**
+     * A stack the title screen can build. Since 26.1 items only get their components when a world
+     * loads, and NeoForge rejects the ones built from the dev registry lookup, so each item used
+     * here gets a minimal set instead; checks then set what they need on the stack on every version.
+     */
+    private static ItemStack stack(Item item) {
+        //? if >=26.1 {
+        var holder = item.builtInRegistryHolder();
+        if (!holder.areComponentsBound()) {
+            holder.bindComponents(DataComponentMap.builder().set(DataComponents.MAX_STACK_SIZE, 1).build());
+        }
+        //?}
+        return new ItemStack(item);
+    }
+
+    private static ItemStack damageable(Item item, int maxDamage) {
+        ItemStack stack = stack(item);
+        stack.set(DataComponents.MAX_DAMAGE, maxDamage);
+        stack.set(DataComponents.DAMAGE, 0);
+        return stack;
+    }
+
+    private static List<Component> trimTooltip() {
+        HolderLookup.Provider registries = registries();
         ArmorTrim trim = new ArmorTrim(
             registries.lookupOrThrow(Registries.TRIM_MATERIAL).getOrThrow(TrimMaterials.IRON),
             registries.lookupOrThrow(Registries.TRIM_PATTERN).getOrThrow(TrimPatterns.SENTRY));
@@ -304,6 +371,317 @@ public final class SelfTest {
         /*trim.addToTooltip(Item.TooltipContext.of(registries), lines::add, TooltipFlag.NORMAL);
         *///?}
         return lines;
+    }
+
+    private static void checkDurabilityLine() {
+        ItemStack stack = damageable(Items.DIAMOND_PICKAXE, 1561);
+        require(TooltipDurability.line(stack, List.of(), false) == null, "shown on an undamaged item");
+        stack.setDamageValue(stack.getMaxDamage() - 312);
+        Component line = TooltipDurability.line(stack, List.of(), false);
+        require(line != null, "not shown on a damaged item");
+        require(line.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents, "not translated");
+        String expected = "312 / " + stack.getMaxDamage() + " (20";
+        require(line.getString().contains(expected), "got '" + line.getString() + "'");
+        int[] colors = {0};
+        line.visit((style, text) -> {
+            if (text.contains("312") && style.getColor() != null) colors[0] = style.getColor().getValue();
+            return java.util.Optional.empty();
+        }, Style.EMPTY);
+        require(colors[0] == stack.getBarColor(), "color " + Integer.toHexString(colors[0]));
+    }
+
+    private static void checkDurabilitySkipped() {
+        TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
+        ItemStack damaged = damageable(Items.IRON_SWORD, 250);
+        damaged.setDamageValue(10);
+        require(TooltipDurability.line(damaged, List.of(), false) != null, "not shown");
+        Component vanilla = Component.translatable("item.durability", 1, 2);
+        require(TooltipDurability.line(damaged, List.of(vanilla), false) == null, "doubled vanilla's line");
+        require(TooltipDurability.line(stack(Items.DIRT), List.of(), false) == null, "shown on dirt");
+        ItemStack unbreakable = damageable(Items.IRON_SWORD, 250);
+        //? if >=1.21.5 {
+        unbreakable.set(DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
+        //?} else {
+        /*unbreakable.set(DataComponents.UNBREAKABLE, new net.minecraft.world.item.component.Unbreakable(true));
+        *///?}
+        require(TooltipDurability.line(unbreakable, List.of(), false) == null, "shown on an unbreakable item");
+        config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.SHIFT_HELD;
+        require(TooltipDurability.line(damaged, List.of(), false) == null, "shown without Shift");
+        require(TooltipDurability.line(damaged, List.of(), true) != null, "not shown with Shift");
+        config.durability.enabled = false;
+        require(TooltipDurability.line(damaged, List.of(), true) == null, "shown while disabled");
+
+        // The hook on the real method, including the immutable list vanilla returns for hidden tooltips
+        config.durability.enabled = true;
+        config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.ALWAYS;
+        config.durability.format = TooltipsImprovedConfig.DurabilityFormat.FRACTION;
+        String expected = (damaged.getMaxDamage() - 10) + " / " + damaged.getMaxDamage();
+        List<Component> lines = damaged.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL);
+        require(lines.get(lines.size() - 1).getString().contains(expected), "hook added no line: " + lines);
+        List<Component> advanced = damaged.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.ADVANCED);
+        require(advanced.stream().filter(line -> line.getString().contains(expected)).count() == 1, "doubled F3+H's line");
+        ItemStack hidden = damaged.copy();
+        //? if >=1.21.5 {
+        hidden.set(DataComponents.TOOLTIP_DISPLAY, new net.minecraft.world.item.component.TooltipDisplay(true, new java.util.LinkedHashSet<>()));
+        //?} else {
+        /*hidden.set(DataComponents.HIDE_TOOLTIP, net.minecraft.util.Unit.INSTANCE);
+        *///?}
+        require(hidden.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL).isEmpty(), "added to a hidden tooltip");
+    }
+
+    /** Base values of a default player, so the checks don't need one. */
+    private static double playerBase(net.minecraft.core.Holder<Attribute> attribute) {
+        return attribute == Attributes.ATTACK_DAMAGE ? 1 : attribute == Attributes.ATTACK_SPEED ? 4 : 0;
+    }
+
+    private static ItemAttributeModifiers weapon(double damage, double speed) {
+        return ItemAttributeModifiers.builder()
+            .add(Attributes.ATTACK_DAMAGE, new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, damage, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ATTACK_SPEED, new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, speed, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
+            .build();
+    }
+
+    private static ItemAttributeModifiers armor(net.minecraft.core.Holder<Attribute> attribute, double amount, AttributeModifier.Operation operation, EquipmentSlotGroup group) {
+        return ItemAttributeModifiers.builder().add(attribute, new AttributeModifier(TooltipsImproved.id("test"), amount, operation), group).build();
+    }
+
+    private static void requireDelta(List<TooltipComparison.AttributeDelta> deltas, net.minecraft.core.Holder<Attribute> attribute, double shown) {
+        for (TooltipComparison.AttributeDelta delta : deltas) {
+            if (delta.attribute() == attribute) {
+                require(Math.abs(delta.displayAmount() - shown) < 1e-6, attribute.getRegisteredName() + " was " + delta.displayAmount() + ", not " + shown);
+                return;
+            }
+        }
+        throw new AssertionError(attribute.getRegisteredName() + " missing from " + deltas);
+    }
+
+    private static void checkComparisonDeltas() {
+        ItemAttributeModifiers sword = weapon(5, -2.4), axe = weapon(8, -3.2);
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADD_VALUE;
+
+        // Two weapons: the base values cancel out
+        List<TooltipComparison.AttributeDelta> swordVsAxe = TooltipComparison.deltas(sword, axe, EquipmentSlot.MAINHAND, SelfTest::playerBase);
+        require(swordVsAxe.size() == 2, "got " + swordVsAxe);
+        requireDelta(swordVsAxe, Attributes.ATTACK_DAMAGE, -3);
+        requireDelta(swordVsAxe, Attributes.ATTACK_SPEED, 0.8);
+
+        // Nothing equipped: every stat is a plus, at the value vanilla shows (6 and 1.6, not 5 and -2.4)
+        List<TooltipComparison.AttributeDelta> swordVsEmpty = TooltipComparison.deltas(sword, ItemAttributeModifiers.EMPTY, EquipmentSlot.MAINHAND, SelfTest::playerBase);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_DAMAGE, 6);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_SPEED, 1.6);
+
+        // An attribute only one side has, including ones outside the usual list
+        ItemAttributeModifiers lucky = armor(Attributes.LUCK, 1, add, EquipmentSlotGroup.MAINHAND);
+        requireDelta(TooltipComparison.deltas(lucky, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, 1);
+        requireDelta(TooltipComparison.deltas(sword, lucky, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, -1);
+
+        // Vanilla's scaling: knockback resistance times ten, multipliers as percentages, kept apart from flat amounts
+        ItemAttributeModifiers knockback = armor(Attributes.KNOCKBACK_RESISTANCE, 0.1, add, EquipmentSlotGroup.CHEST);
+        requireDelta(TooltipComparison.deltas(knockback, ItemAttributeModifiers.EMPTY, EquipmentSlot.CHEST, SelfTest::playerBase), Attributes.KNOCKBACK_RESISTANCE, 1);
+        ItemAttributeModifiers flat = armor(Attributes.ARMOR, 2, add, EquipmentSlotGroup.CHEST);
+        ItemAttributeModifiers percent = armor(Attributes.ARMOR, 0.5, AttributeModifier.Operation.ADD_MULTIPLIED_BASE, EquipmentSlotGroup.CHEST);
+        List<TooltipComparison.AttributeDelta> mixed = TooltipComparison.deltas(flat, percent, EquipmentSlot.CHEST, SelfTest::playerBase);
+        require(mixed.size() == 2, "operations were merged: " + mixed);
+
+        // Zero and floating point noise are hidden, and so are modifiers for other slots
+        require(TooltipComparison.deltas(sword, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase).isEmpty(), "identical items differ");
+        require(TooltipComparison.deltas(armor(Attributes.ARMOR, 0.1 + 0.2, add, EquipmentSlotGroup.HEAD), armor(Attributes.ARMOR, 0.3, add, EquipmentSlotGroup.HEAD),
+            EquipmentSlot.HEAD, SelfTest::playerBase).isEmpty(), "floating point noise was shown");
+        require(TooltipComparison.deltas(flat, ItemAttributeModifiers.EMPTY, EquipmentSlot.HEAD, SelfTest::playerBase).isEmpty(), "counted another slot's modifier");
+    }
+
+    private static void checkComparisonSlot() {
+        ItemAttributeModifiers none = ItemAttributeModifiers.EMPTY;
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADD_VALUE;
+        require(TooltipComparison.slotFor(EquipmentSlot.HEAD, armor(Attributes.ARMOR, 2, add, EquipmentSlotGroup.HEAD)) == EquipmentSlot.HEAD, "armor");
+        require(TooltipComparison.slotFor(EquipmentSlot.CHEST, none) == EquipmentSlot.CHEST, "elytra-like item");
+        require(TooltipComparison.slotFor(EquipmentSlot.MAINHAND, weapon(5, -2.4)) == EquipmentSlot.MAINHAND, "weapon");
+        require(TooltipComparison.slotFor(EquipmentSlot.MAINHAND, none) == null, "a plain item was compared");
+        require(TooltipComparison.slotFor(EquipmentSlot.OFFHAND, none) == null, "a shield was compared");
+        require(TooltipComparison.slotFor(EquipmentSlot.MAINHAND, armor(Attributes.ARMOR, 3, add, EquipmentSlotGroup.BODY)) == null, "animal armor was compared");
+    }
+
+    private static void checkComparisonLines() {
+        TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADD_VALUE;
+        ItemStack hovered = stack(Items.IRON_CHESTPLATE), equipped = stack(Items.DIAMOND_CHESTPLATE);
+        hovered.set(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.builder()
+            .add(Attributes.ARMOR, new AttributeModifier(TooltipsImproved.id("armor"), 6, add), EquipmentSlotGroup.CHEST)
+            .add(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(TooltipsImproved.id("toughness"), 2, add), EquipmentSlotGroup.CHEST).build());
+        equipped.set(DataComponents.ATTRIBUTE_MODIFIERS, armor(Attributes.ARMOR, 8, add, EquipmentSlotGroup.CHEST));
+
+        List<Component> lines = TooltipComparison.lines(hovered, equipped, EquipmentSlot.CHEST, SelfTest::playerBase);
+        require(lines.size() == 4, "got " + lines);
+        require(lines.get(1).getString().startsWith("Compared to equipped: "), "header " + lines.get(1).getString());
+        require(lines.get(2).getString().equals("-2 Armor"), "got '" + lines.get(2).getString() + "'");
+        require(lines.get(3).getString().equals("+2 Armor Toughness"), "got '" + lines.get(3).getString() + "'");
+        require(TextColor.fromLegacyFormat(ChatFormatting.RED).equals(lines.get(2).getStyle().getColor()), "worse isn't red");
+        require(TextColor.fromLegacyFormat(ChatFormatting.GREEN).equals(lines.get(3).getStyle().getColor()), "better isn't green");
+
+        List<Component> empty = TooltipComparison.lines(hovered, ItemStack.EMPTY, EquipmentSlot.CHEST, SelfTest::playerBase);
+        require(empty.get(1).getString().equals("Compared to equipped: Nothing"), empty.get(1).getString());
+        require(empty.stream().skip(2).allMatch(line -> line.getString().startsWith("+")), "not all plus: " + empty);
+
+        require(TooltipComparison.lines(hovered, hovered, EquipmentSlot.CHEST, SelfTest::playerBase).isEmpty(), "compared the equipped stack to itself");
+        ItemStack same = hovered.copy();
+        require(TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST, SelfTest::playerBase).isEmpty(), "identical stats weren't hidden");
+        config.comparison.hideIdentical = false;
+        List<Component> shown = TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST, SelfTest::playerBase);
+        require(shown.size() == 3 && shown.get(2).getString().equals("No difference in stats"), "got " + shown);
+        require(TooltipComparison.lines(hovered, (net.minecraft.world.entity.player.Player) null, false).isEmpty(), "needs a player");
+    }
+
+    private static ItemStack book(String... pages) {
+        List<net.minecraft.server.network.Filterable<Component>> filterable = new ArrayList<>();
+        for (String page : pages) filterable.add(net.minecraft.server.network.Filterable.passThrough(Component.literal(page)));
+        ItemStack book = stack(Items.WRITTEN_BOOK);
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(net.minecraft.server.network.Filterable.passThrough("Title"), "Author", 0, filterable, true));
+        return book;
+    }
+
+    private static ItemStack map() {
+        ItemStack map = stack(Items.FILLED_MAP);
+        map.set(DataComponents.MAP_ID, new net.minecraft.world.level.saveddata.maps.MapId(12345));
+        return map;
+    }
+
+    private static BannerPatternLayers patterns() {
+        var pattern = registries().lookupOrThrow(Registries.BANNER_PATTERN).getOrThrow(BannerPatterns.STRIPE_TOP);
+        return new BannerPatternLayers.Builder().add(pattern, DyeColor.RED).build();
+    }
+
+    private static ItemStack plainBanner() {
+        //? if >=26.2 {
+        return stack(Items.BANNER.pick(DyeColor.WHITE));
+        //?} else {
+        /*return stack(Items.WHITE_BANNER);
+        *///?}
+    }
+
+    private static ItemStack banner() {
+        ItemStack banner = plainBanner();
+        banner.set(DataComponents.BANNER_PATTERNS, patterns());
+        return banner;
+    }
+
+    private static FireworkExplosion explosion() {
+        return new FireworkExplosion(FireworkExplosion.Shape.STAR, it.unimi.dsi.fastutil.ints.IntList.of(0xFF0000, 0x00FF00), it.unimi.dsi.fastutil.ints.IntList.of(0x0000FF), false, false);
+    }
+
+    private static ItemStack star() {
+        ItemStack star = stack(Items.FIREWORK_STAR);
+        star.set(DataComponents.FIREWORK_EXPLOSION, explosion());
+        return star;
+    }
+
+    private static ClientTooltipComponent renderer(ItemStack stack) {
+        var image = stack.getTooltipImage();
+        require(image.isPresent(), "no preview for " + stack);
+        // Through vanilla's method, as a tooltip would be, which fails if the hook on it no longer matches
+        return ClientTooltipComponent.create(image.get());
+    }
+
+    private static void checkPreviews() {
+        var font = Minecraft.getInstance().font;
+        require(stack(Items.DIRT).getTooltipImage().isEmpty(), "preview on dirt");
+
+        require(TooltipPreviews.forStack(book("First page", "Second page"), false).orElseThrow() instanceof TooltipPreviews.BookPreview preview
+            && preview.lines().size() == 1, "not just the first page");
+        require(book().getTooltipImage().isEmpty(), "preview of a book with no pages");
+
+        // No world here, so this is also what an unsynced map gets
+        ClientTooltipComponent map = renderer(map());
+        require(map.getWidth(font) == font.width(Component.translatable(TooltipsImproved.MOD_ID + ".preview.map_not_loaded")), "not the not loaded line");
+        require(stack(Items.FILLED_MAP).getTooltipImage().isEmpty(), "preview of a map with no id");
+
+        require(renderer(banner()).getWidth(font) == PreviewCanvas.BANNER_WIDTH, "banner width");
+        require(plainBanner().getTooltipImage().isEmpty(), "preview of a plain banner");
+        ItemStack shield = stack(Items.SHIELD);
+        shield.set(DataComponents.BANNER_PATTERNS, patterns());
+        require(TooltipPreviews.forStack(shield, false).orElseThrow() instanceof TooltipPreviews.BannerPreview preview && preview.base() == DyeColor.WHITE, "shield without a base color");
+        shield.set(DataComponents.BASE_COLOR, DyeColor.BLUE);
+        require(TooltipPreviews.forStack(shield, false).orElseThrow() instanceof TooltipPreviews.BannerPreview preview && preview.base() == DyeColor.BLUE, "shield's base color");
+
+        require(renderer(star()).getWidth(font) > 0, "star");
+        ItemStack rocket = stack(Items.FIREWORK_ROCKET);
+        rocket.set(DataComponents.FIREWORKS, new Fireworks(1, List.of()));
+        require(rocket.getTooltipImage().isEmpty(), "preview of a rocket with no explosions");
+        rocket.set(DataComponents.FIREWORKS, new Fireworks(1, List.of(explosion(), explosion())));
+        require(height(renderer(rocket)) > height(renderer(star())), "a second explosion took no room");
+    }
+
+    private static void checkPreviewSettings() {
+        TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
+        config.previews.bookLines = 2;
+        String longPage = "Word ".repeat(200);
+        ItemStack long1 = book(longPage);
+        require(TooltipPreviews.forStack(long1, false).orElseThrow() instanceof TooltipPreviews.BookPreview preview && preview.lines().size() == 2, "bookLines ignored");
+        config.previews.bookLines = 4;
+        require(TooltipPreviews.forStack(long1, false).orElseThrow() instanceof TooltipPreviews.BookPreview preview && preview.lines().size() == 4, "kept the old split");
+
+        config.previews.books = false;
+        require(TooltipPreviews.forStack(long1, false).isEmpty(), "books toggle");
+        config.previews.maps = false;
+        require(TooltipPreviews.forStack(map(), false).isEmpty(), "maps toggle");
+        config.previews.banners = false;
+        require(TooltipPreviews.forStack(banner(), false).isEmpty(), "banners toggle");
+        config.previews.fireworks = false;
+        require(TooltipPreviews.forStack(star(), false).isEmpty(), "fireworks toggle");
+
+        config.previews = new TooltipsImprovedConfig.Previews();
+        config.previews.showWhen = TooltipsImprovedConfig.ShowWhen.SHIFT_HELD;
+        require(TooltipPreviews.forStack(star(), false).isEmpty(), "shown without Shift");
+        require(TooltipPreviews.forStack(star(), true).isPresent(), "not shown with Shift");
+        config.previews.showWhen = TooltipsImprovedConfig.ShowWhen.ALWAYS;
+
+        ItemStack hidden = star();
+        //? if >=1.21.5 {
+        hidden.set(DataComponents.TOOLTIP_DISPLAY, new net.minecraft.world.item.component.TooltipDisplay(true, new java.util.LinkedHashSet<>()));
+        //?} else {
+        /*hidden.set(DataComponents.HIDE_TOOLTIP, net.minecraft.util.Unit.INSTANCE);
+        *///?}
+        require(TooltipPreviews.forStack(hidden, false).isEmpty(), "shown on a hidden tooltip");
+
+        java.nio.file.Path file;
+        try {
+            file = Files.createTempFile(TooltipsImproved.MOD_ID, ".json");
+            Files.writeString(file, "{ \"previews\": { \"mapSize\": 99999, \"bookLines\": -4 }, \"durability\": null, \"comparison\": { \"showWhen\": \"NOPE\" } }");
+        } catch (java.io.IOException e) {
+            throw new AssertionError(e);
+        }
+        TooltipsImprovedConfig loaded = TooltipsImprovedConfig.load(file);
+        require(loaded.previews.mapSize == TooltipsImprovedConfig.MAX_MAP_SIZE && loaded.previews.bookLines == TooltipsImprovedConfig.MIN_BOOK_LINES, "sizes weren't limited");
+        require(loaded.durability != null && loaded.comparison.showWhen == TooltipsImprovedConfig.ShowWhen.ALWAYS, "a bad section wasn't fixed");
+    }
+
+    private static int height(ClientTooltipComponent line) {
+        return TooltipLines.height(line, Minecraft.getInstance().font);
+    }
+
+    private static void checkPreviewSizes() {
+        TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
+        var font = Minecraft.getInstance().font;
+        MapItemSavedData data = MapItemSavedData.createFresh(0, 0, (byte) 0, false, false, Level.OVERWORLD);
+        for (int size : List.of(TooltipsImprovedConfig.MIN_MAP_SIZE, 64, TooltipsImprovedConfig.MAX_MAP_SIZE)) {
+            ClientTooltipComponent map = new TooltipPreviews.MapPreview(new net.minecraft.world.level.saveddata.maps.MapId(1), data, size).renderer();
+            require(map.getWidth(font) == size && height(map) == size + 2, "map at " + size);
+        }
+        config.previews.bookLines = 3;
+        ClientTooltipComponent page = renderer(book("Word ".repeat(200)));
+        require(height(page) == 3 * font.lineHeight + 2 * 4 + 2, "page height " + height(page));
+
+        // A preview wider and taller than the screen scrolls like any tall tooltip, and text around it still wraps
+        config.wrap = TooltipsImprovedConfig.WrapMode.SCREEN;
+        config.scrollWheel = true;
+        TooltipScroll.reset();
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        int tallSize = screenHeight + 200;
+        ClientTooltipComponent image = new TooltipPreviews.MapPreview(new net.minecraft.world.level.saveddata.maps.MapId(1), data, tallSize).renderer();
+        List<ClientTooltipComponent> lines = List.of(text(Component.literal("Title")), image, text(Component.literal(longText())));
+        List<ClientTooltipComponent> prepared = TooltipLines.prepare(lines, new Object());
+        require(prepared.size() > lines.size() && prepared.get(1) == image, "wrapping changed the image");
+        require(TooltipScroll.onScroll(0, -1), "a tooltip with a tall image didn't scroll");
+        TooltipScroll.reset();
     }
 
     private static void checkWrap() {
