@@ -16,7 +16,6 @@ import net.minecraft.world.item.component.TooltipDisplay;
 /*import net.minecraft.core.component.DataComponents;
 *///?}
 
-/** Everything this mod adds to the text of an item tooltip, in the order it's shown. */
 public final class TooltipExtras {
     /** @return the lines to show; vanilla's own list can be immutable, so it's only added to through a copy */
     public static List<Component> addLines(ItemStack stack, List<Component> lines, Player player, TooltipFlag flag) {
@@ -36,7 +35,6 @@ public final class TooltipExtras {
         return result;
     }
 
-    /** Whether the item asks for no tooltip at all. */
     static boolean hidesTooltip(ItemStack stack) {
         //? if >=1.21.5 {
         return stack.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT).hideTooltip();

@@ -14,9 +14,7 @@ import java.util.List;
 /*import com.tooltipsimproved.mixin.ClientTextTooltipAccessor;
 *///?}
 
-/** Prepares a tooltip's lines before vanilla draws them: tracks it for scrolling, wraps it, trims the title gap. */
 public final class TooltipLines {
-    /** Whether the tooltip being drawn follows the cursor; set from its positioner just before {@link #prepare}. */
     private static boolean followsCursor = true;
     /** Whether vanilla leaves a gap under the first line of the tooltip being drawn; 26.3 can turn it off per tooltip. */
     private static boolean firstLineGap = true;
@@ -36,7 +34,6 @@ public final class TooltipLines {
     }
 
     //? if >=26.3 {
-    /** Set from the tooltip method's parameter, after {@link TooltipsImprovedConfig#removeFirstLineGap} is applied to it. */
     public static void firstLineGap(boolean gap) {
         firstLineGap = gap;
     }
@@ -60,7 +57,6 @@ public final class TooltipLines {
         return new Prepared(prepared);
     }
 
-    /** Tells {@link TooltipScroll} how big the tooltip is, as the wheel only moves ones that don't fit. */
     private static void measure(List<ClientTooltipComponent> lines) {
         Font font = Minecraft.getInstance().font;
         int width = 0, height = 0;

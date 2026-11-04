@@ -28,7 +28,6 @@ public final class TooltipScroll {
     /** More tooltips than this in one frame means frames aren't being told apart, so the list starts over. */
     private static final int MAX_FRAME_TITLES = 16;
 
-    // The drawn offset glides toward the target one
     private static double x, y;
     private static double targetX, targetY;
     private static long lastDrawn;
@@ -36,7 +35,6 @@ public final class TooltipScroll {
     // Whether a tooltip too tall or too wide for the screen was drawn this frame or the one before;
     // the wheel only moves tooltips that need it
     private static boolean tall, wide, wasTall, wasWide;
-    /** Size of the contents of the tooltip being drawn. */
     private static int width, height;
 
     // First lines of the tooltips drawn in the current frame and the one before, so several
@@ -76,13 +74,11 @@ public final class TooltipScroll {
         frameTitles.add(read(first));
     }
 
-    /** Keeps the current tooltip counted as visible without comparing it again. */
     public static void stillDrawn() {
         if (!isVisible() && TooltipsImprovedConfig.get().resetWhenHidden) resetOffset();
         lastDrawn = System.currentTimeMillis();
     }
 
-    /** Called with the size of the tooltip's contents once it's wrapped. */
     public static void measured(int width, int height) {
         TooltipScroll.width = width;
         TooltipScroll.height = height;
@@ -92,7 +88,6 @@ public final class TooltipScroll {
         if (width + border > window.getGuiScaledWidth()) wide = true;
     }
 
-    /** Called when a tooltip is drawn with its placed position, returns where to draw it. */
     public static Vector2ic offset(Vector2ic position) {
         return offset(position, System.nanoTime());
     }
@@ -116,7 +111,6 @@ public final class TooltipScroll {
         return new Vector2i(position.x() + dx, position.y() + dy);
     }
 
-    /** Limits the target offset so at least {@link #MIN_VISIBLE} pixels of the tooltip stay on screen. */
     private static void keepOnScreen(Vector2ic position) {
         var window = Minecraft.getInstance().getWindow();
         targetX = clamp(targetX, MIN_VISIBLE - position.x() - width, window.getGuiScaledWidth() - MIN_VISIBLE - position.x());
@@ -128,7 +122,6 @@ public final class TooltipScroll {
         return min > max ? value : Math.max(min, Math.min(max, value));
     }
 
-    /** Moves {@code from} part of the way to {@code to}, landing on it once within half a pixel. */
     private static double approach(double from, double to, double share) {
         double next = from + (to - from) * share;
         return Math.abs(to - next) < 0.5 ? to : next;
@@ -213,7 +206,6 @@ public final class TooltipScroll {
         x = y = targetX = targetY = 0;
     }
 
-    /** Forgets the current tooltip, e.g. when its screen closes. */
     public static void reset() {
         resetOffset();
         frame = null;

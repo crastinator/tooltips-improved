@@ -54,12 +54,6 @@ import net.minecraft.world.item.armortrim.TrimMaterials;
 import net.minecraft.world.item.armortrim.TrimPatterns;
 *///?}
 
-/**
- * In-game checks for development, run on the title screen when the game is started with
- * {@code -Dtooltipsimproved.selftest=true} (Gradle: {@code runClient -Pselftest}). Logs one line per
- * check and a summary, then quits. Mixin targets are loaded first, so a hook that no longer matches
- * its target fails here rather than in someone's game.
- */
 public final class SelfTest {
     public static final boolean ENABLED = Boolean.getBoolean(TooltipsImproved.MOD_ID + ".selftest");
     private static final String PREFIX = "[Tooltips Improved self-test] ";
@@ -316,7 +310,6 @@ public final class SelfTest {
         }
     }
 
-    /** The settings screen, laid out at the window's size as if it had been opened. */
     private static TooltipsImprovedScreen openScreen() {
         Minecraft minecraft = Minecraft.getInstance();
         TooltipsImprovedScreen screen = new TooltipsImprovedScreen(null);
@@ -429,7 +422,6 @@ public final class SelfTest {
         require(hidden.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL).isEmpty(), "added to a hidden tooltip");
     }
 
-    /** Base values of a default player, so the checks don't need one. */
     private static double playerBase(net.minecraft.core.Holder<Attribute> attribute) {
         return attribute == Attributes.ATTACK_DAMAGE ? 1 : attribute == Attributes.ATTACK_SPEED ? 4 : 0;
     }
@@ -459,7 +451,6 @@ public final class SelfTest {
         ItemAttributeModifiers sword = weapon(5, -2.4), axe = weapon(8, -3.2);
         AttributeModifier.Operation add = AttributeModifier.Operation.ADD_VALUE;
 
-        // Two weapons: the base values cancel out
         List<TooltipComparison.AttributeDelta> swordVsAxe = TooltipComparison.deltas(sword, axe, EquipmentSlot.MAINHAND, SelfTest::playerBase);
         require(swordVsAxe.size() == 2, "got " + swordVsAxe);
         requireDelta(swordVsAxe, Attributes.ATTACK_DAMAGE, -3);
@@ -470,12 +461,10 @@ public final class SelfTest {
         requireDelta(swordVsEmpty, Attributes.ATTACK_DAMAGE, 6);
         requireDelta(swordVsEmpty, Attributes.ATTACK_SPEED, 1.6);
 
-        // An attribute only one side has, including ones outside the usual list
         ItemAttributeModifiers lucky = armor(Attributes.LUCK, 1, add, EquipmentSlotGroup.MAINHAND);
         requireDelta(TooltipComparison.deltas(lucky, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, 1);
         requireDelta(TooltipComparison.deltas(sword, lucky, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, -1);
 
-        // Vanilla's scaling: knockback resistance times ten, multipliers as percentages, kept apart from flat amounts
         ItemAttributeModifiers knockback = armor(Attributes.KNOCKBACK_RESISTANCE, 0.1, add, EquipmentSlotGroup.CHEST);
         requireDelta(TooltipComparison.deltas(knockback, ItemAttributeModifiers.EMPTY, EquipmentSlot.CHEST, SelfTest::playerBase), Attributes.KNOCKBACK_RESISTANCE, 1);
         ItemAttributeModifiers flat = armor(Attributes.ARMOR, 2, add, EquipmentSlotGroup.CHEST);
@@ -483,7 +472,6 @@ public final class SelfTest {
         List<TooltipComparison.AttributeDelta> mixed = TooltipComparison.deltas(flat, percent, EquipmentSlot.CHEST, SelfTest::playerBase);
         require(mixed.size() == 2, "operations were merged: " + mixed);
 
-        // Zero and floating point noise are hidden, and so are modifiers for other slots
         require(TooltipComparison.deltas(sword, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase).isEmpty(), "identical items differ");
         require(TooltipComparison.deltas(armor(Attributes.ARMOR, 0.1 + 0.2, add, EquipmentSlotGroup.HEAD), armor(Attributes.ARMOR, 0.3, add, EquipmentSlotGroup.HEAD),
             EquipmentSlot.HEAD, SelfTest::playerBase).isEmpty(), "floating point noise was shown");
@@ -670,7 +658,6 @@ public final class SelfTest {
         ClientTooltipComponent page = renderer(book("Word ".repeat(200)));
         require(height(page) == 3 * font.lineHeight + 2 * 4 + 2, "page height " + height(page));
 
-        // A preview wider and taller than the screen scrolls like any tall tooltip, and text around it still wraps
         config.wrap = TooltipsImprovedConfig.WrapMode.SCREEN;
         config.scrollWheel = true;
         TooltipScroll.reset();
@@ -713,7 +700,6 @@ public final class SelfTest {
         TooltipScroll.reset();
         List<ClientTooltipComponent> first = tall("First");
 
-        // Simulated 60 FPS frames: the glide has to land exactly, in both directions
         scroll(first, -1);
         require(settle(origin).y() == 50 + step, "wheel down settled at " + settle(origin));
         scroll(first, 1);
@@ -721,7 +707,6 @@ public final class SelfTest {
         scroll(first, 1);
         require(settle(origin).y() == 50 - step, "wheel up settled at " + settle(origin));
 
-        // Trackpads send fractions of a notch
         scroll(first, -0.1);
         require(settle(origin).y() == 50 - step + Math.round(step * 0.1f), "a tenth of a notch settled at " + settle(origin));
 
@@ -780,14 +765,12 @@ public final class SelfTest {
         require(!Files.readString(file).contains("NaN"), "NaN was written back");
     }
 
-    /** A tooltip taller than any screen, so the wheel moves it. */
     private static List<ClientTooltipComponent> tall(String title) {
         List<ClientTooltipComponent> lines = new ArrayList<>(List.of(text(Component.literal(title))));
         for (int i = 0; i < 400; i++) lines.add(text(Component.literal("Line " + i)));
         return lines;
     }
 
-    /** Wraps as for a tooltip with vanilla's gap under the title. */
     private static List<ClientTooltipComponent> wrap(List<ClientTooltipComponent> lines, boolean followsCursor) {
         return TooltipWrap.wrap(lines, followsCursor, true, true);
     }
@@ -819,13 +802,11 @@ public final class SelfTest {
         }
     }
 
-    /** Runs a check with a config field changed; {@link #check} puts the config back afterwards. */
     private static void withField(Runnable set, Check check) throws Exception {
         set.run();
         check.run();
     }
 
-    /** The config as it was before the checks, restored after each one so they all see the developer's settings. */
     private static String configBefore;
 
     private static void restoreConfig() throws IllegalAccessException {

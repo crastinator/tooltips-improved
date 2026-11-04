@@ -17,10 +17,6 @@ import java.util.List;
 /*import com.tooltipsimproved.TooltipBackground;
 *///?}
 
-/**
- * Hooks the method that draws every tooltip: wraps its lines, swaps in the configured placement,
- * then moves the placed tooltip by the scroll offset.
- */
 //? if >=26.1 {
 @Mixin(net.minecraft.client.gui.GuiGraphicsExtractor.class)
 //?} else {

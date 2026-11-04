@@ -9,7 +9,6 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 public class TooltipsImprovedForge {
     public TooltipsImprovedForge(FMLJavaModLoadingContext context) {
         TooltipsImproved.init();
-        // Adds a Config button for the mod in Forge's mod list
         context.registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
             () -> new ConfigScreenHandler.ConfigScreenFactory(TooltipsImprovedScreen::new));
     }

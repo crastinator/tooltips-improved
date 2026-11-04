@@ -28,9 +28,6 @@ import net.minecraft.world.item.armortrim.TrimMaterial;
 import net.minecraft.world.item.armortrim.TrimPattern;
 *///?}
 
-/**
- * Replaces vanilla's three trim lines ("Upgrade:", pattern, material) with a single one.
- */
 @Mixin(ArmorTrim.class)
 public abstract class ArmorTrimMixin {
     @Shadow @Final private Holder<TrimMaterial> material;

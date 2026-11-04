@@ -11,7 +11,6 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class TooltipsImprovedNeoForge {
     public TooltipsImprovedNeoForge(IEventBus modEventBus, ModContainer modContainer) {
         TooltipsImproved.init();
-        // Adds a Config button for the mod in NeoForge's mod list
         modContainer.registerExtensionPoint(IConfigScreenFactory.class, (container, parent) -> new TooltipsImprovedScreen(parent));
     }
 }

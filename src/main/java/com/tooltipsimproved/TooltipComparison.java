@@ -24,7 +24,6 @@ import java.util.function.ToDoubleFunction;
 import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 
-/** Shows how a hovered item's stats differ from what the player has in the matching slot. */
 public final class TooltipComparison {
     private static final String KEY = TooltipsImproved.MOD_ID + ".comparison.";
     /** Vanilla shows amounts to two decimals, so anything smaller would read as a change of 0. */
@@ -46,9 +45,6 @@ public final class TooltipComparison {
      * Amounts are on the basis vanilla's tooltips use: an item's own attack damage and speed count
      * the player's base value, so "6 Attack Damage" against "4 Attack Damage" is a difference of 2,
      * and an empty slot counts as 0.
-     *
-     * @param baseValue the player's base value of an attribute
-     * @return one entry per changed attribute and operation, the hovered item's stats first
      */
     public static List<AttributeDelta> deltas(ItemAttributeModifiers hovered, ItemAttributeModifiers equipped, EquipmentSlot slot, ToDoubleFunction<Holder<Attribute>> baseValue) {
         Map<Stat, Double> totals = new LinkedHashMap<>();
@@ -85,7 +81,6 @@ public final class TooltipComparison {
         return inHand[0] ? EquipmentSlot.MAINHAND : null;
     }
 
-    /** The lines to add for a player hovering {@code hovered}; empty for none. */
     public static List<Component> lines(ItemStack hovered, Player player, boolean shift) {
         TooltipsImprovedConfig.Comparison config = TooltipsImprovedConfig.get().comparison;
         if (!config.enabled || player == null || !attributesShown(hovered)) return List.of();
@@ -114,7 +109,6 @@ public final class TooltipComparison {
         return lines;
     }
 
-    /** One line like "+2 Armor", using vanilla's own translations so it reads like the lines above it. */
     private static Component line(AttributeDelta delta) {
         double shown = delta.displayAmount();
         boolean increase = shown > 0;
@@ -124,7 +118,6 @@ public final class TooltipComparison {
             .withStyle(color(delta.attribute().value(), increase));
     }
 
-    /** Green if the change is better, red if worse, and gray for attributes that are neither, going by how vanilla rates them. */
     private static ChatFormatting color(Attribute attribute, boolean increase) {
         ChatFormatting vanilla = attribute.getStyle(increase);
         if (vanilla == ChatFormatting.RED || vanilla == ChatFormatting.GRAY) return vanilla;

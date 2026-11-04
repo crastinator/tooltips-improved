@@ -20,7 +20,6 @@ public final class TooltipsImprovedConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static volatile TooltipsImprovedConfig instance;
 
-    // Limits shared with the settings screen's sliders
     public static final int MIN_WRAP_WIDTH = 50, MAX_WRAP_WIDTH = 400;
     public static final int MIN_WHEEL_STEP = 1, MAX_WHEEL_STEP = 50;
     public static final int MIN_KEY_SPEED = 10, MAX_KEY_SPEED = 1000;
@@ -29,35 +28,24 @@ public final class TooltipsImprovedConfig {
     public static final int MIN_BOOK_LINES = 1, MAX_BOOK_LINES = 14;
     public static final int MIN_MAP_SIZE = 32, MAX_MAP_SIZE = 256;
 
-    /** Show armor trims on one line. */
     public boolean foldTrims = true;
 
-    /** How to break text lines too wide for the space they get. */
     public WrapMode wrap = WrapMode.CURSOR;
-    /** Maximum text width in pixels for {@link WrapMode#FIXED}. */
     public int wrapWidth = 200;
     /** Skip vanilla's 170 pixel wrap on button tooltips, leaving them to {@link #wrap}. */
     public boolean unwrapButtonTooltips = false;
 
-    /** Where to put a hover tooltip that doesn't fit beside the cursor. */
     public Placement placement = Placement.CENTER_WHEN_CRAMPED;
-    /** Apply {@link #placement} to every tooltip, not just ones that follow the cursor. */
     public boolean placeAllTooltips = false;
-    /** Keep the top of a tooltip taller than the screen in view, rather than the bottom. */
     public boolean topFirst = true;
-    /** Show button tooltips centered above or below the button instead of at the cursor. */
     public boolean buttonTooltipsBesideButton = false;
 
     /** Opacity of the tooltip background and border, from 0 to 1. Text stays opaque. */
     public double backgroundOpacity = 1.0;
-    /** Drop the 2 pixel gap vanilla puts under a tooltip's first line. */
     public boolean removeFirstLineGap = false;
 
-    /** Move tooltips with the mouse wheel. */
     public boolean scrollWheel = true;
-    /** Move tooltips with the player's movement keys (WASD by default) as well as the keybinds. */
     public boolean movementKeys = false;
-    /** Put the tooltip back in place once it has been hidden. */
     public boolean resetWhenHidden = true;
     public boolean invertHorizontal = false;
     public boolean invertVertical = false;
@@ -70,34 +58,27 @@ public final class TooltipsImprovedConfig {
 
     public Durability durability = new Durability();
 
-    /** The durability line in item tooltips. */
     public static final class Durability {
         public boolean enabled = true;
         public DurabilityShowWhen showWhen = DurabilityShowWhen.WHEN_DAMAGED;
         public DurabilityFormat format = DurabilityFormat.FRACTION;
-        /** Color the numbers like vanilla's durability bar. */
         public boolean colorByRemaining = true;
     }
 
     public Comparison comparison = new Comparison();
 
-    /** The stat differences against equipped items in item tooltips. */
     public static final class Comparison {
         public boolean enabled = true;
         public ShowWhen showWhen = ShowWhen.ALWAYS;
-        /** Show nothing rather than an empty comparison when every stat matches. */
         public boolean hideIdentical = true;
     }
 
     public Previews previews = new Previews();
 
-    /** Pictures of what an item holds, in its tooltip. */
     public static final class Previews {
         public boolean books = true;
-        /** Lines of a book's first page to show. */
         public int bookLines = 6;
         public boolean maps = true;
-        /** Width and height of a map in pixels. */
         public int mapSize = 64;
         public boolean banners = true;
         public boolean fireworks = true;
@@ -122,25 +103,17 @@ public final class TooltipsImprovedConfig {
     }
 
     public enum WrapMode {
-        /** Never wrap. */
         OFF,
-        /** Wrap only what wouldn't fit on the screen at all. */
         SCREEN,
-        /** Wrap to the wider of the spaces left and right of the cursor, so the tooltip fits beside it. */
         CURSOR,
         HALF_SCREEN,
-        /** Wrap at {@link #wrapWidth}. */
         FIXED
     }
 
     public enum Placement {
-        /** Leave it where vanilla puts it, even if that covers the cursor. */
         VANILLA,
-        /** Center it horizontally on the cursor, above it if there's room, otherwise below. */
         CENTER_WHEN_CRAMPED,
-        /** Move it into the screen corner nearest the cursor that doesn't cover it. */
         CORNER_WHEN_CRAMPED,
-        /** Always use a corner, like a side panel. */
         CORNER
     }
 

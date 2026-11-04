@@ -24,7 +24,6 @@ public final class TooltipPlacement {
     /** Space between a button and its tooltip. */
     private static final int BUTTON_GAP = 4;
 
-    /** Wraps the positioner a tooltip was drawn with in one that applies the configured placement. */
     public static ClientTooltipPositioner wrap(ClientTooltipPositioner positioner) {
         // NeoForge and Forge hand the positioner on to an overload that is hooked too
         if (positioner instanceof Placed || positioner instanceof BesideButton) return positioner;
@@ -35,7 +34,6 @@ public final class TooltipPlacement {
         return new Placed(positioner);
     }
 
-    /** Whether a tooltip with this positioner is drawn next to the cursor. */
     public static boolean followsCursor(ClientTooltipPositioner positioner) {
         if (positioner instanceof Placed placed) positioner = placed.vanilla();
         return positioner instanceof DefaultTooltipPositioner;
@@ -48,7 +46,6 @@ public final class TooltipPlacement {
         return new Vector2i(position.x(), EDGE + FRAME);
     }
 
-    /** Positioner for button tooltips: centered under the button, or above it if it doesn't fit below. */
     public static ClientTooltipPositioner besideButton(ScreenRectangle button) {
         return new BesideButton(button);
     }
@@ -87,7 +84,6 @@ public final class TooltipPlacement {
         return Math.max(screenWidth - mouseX, mouseX) - (CURSOR_GAP + FRAME + EDGE);
     }
 
-    /** Horizontally centered on the cursor, above or below it. */
     private static Vector2ic centered(Vector2ic vanilla, int screenWidth, int screenHeight, int mouseX, int mouseY, int width, int height) {
         int left = clampX(mouseX - width / 2, screenWidth, width);
         // Too tall to go above or below anything; keep vanilla's height so topFirst and scrolling apply
@@ -134,7 +130,6 @@ public final class TooltipPlacement {
         return Mth.clamp(x, EDGE + FRAME, Math.max(EDGE + FRAME, screenWidth - EDGE - FRAME - width));
     }
 
-    /** Picks between two heights for a tooltip: {@code preferred} if it fits, else {@code other} if that fits, else whichever spills less. */
     private static int pickSide(int preferred, int other, int screenHeight, int height) {
         int spillPreferred = spill(preferred, screenHeight, height);
         int spillOther = spill(other, screenHeight, height);

@@ -21,7 +21,6 @@ import java.util.Map;
  * splitting it again would reorder it a second time.
  */
 public final class TooltipWrap {
-    /** Vanilla's extra space under a tooltip's first line. */
     private static final int TITLE_GAP = 2;
     private static final int CACHE_SIZE = 64;
     /** The cursor's space is rounded down to a multiple of this, so moving the mouse doesn't split lines anew every pixel. */
@@ -59,7 +58,6 @@ public final class TooltipWrap {
         boolean unicodeFont = minecraft.options.forceUnicodeFont().get();
         boolean japaneseGlyphs = minecraft.options.japaneseGlyphVariants().get();
 
-        // Only copied once something actually needs wrapping
         List<ClientTooltipComponent> wrapped = null;
         for (int i = 0; i < lines.size(); i++) {
             ClientTooltipComponent line = lines.get(i);
@@ -92,7 +90,6 @@ public final class TooltipWrap {
         }
     }
 
-    /** Widest a text line may be, in GUI pixels. */
     private static int limit(TooltipsImprovedConfig config, Minecraft minecraft, boolean followsCursor) {
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenLimit = screenWidth - 2 * TooltipPlacement.EDGE - 2 * TooltipPlacement.FRAME;
@@ -107,7 +104,6 @@ public final class TooltipWrap {
         return Math.max(TooltipsImprovedConfig.MIN_WRAP_WIDTH, Math.min(limit, screenLimit));
     }
 
-    /** The wider of the spaces left and right of the cursor. */
     private static int cursorLimit(Minecraft minecraft, int screenWidth) {
         int mouseX = (int) (minecraft.mouseHandler.xpos() * screenWidth / minecraft.getWindow().getScreenWidth());
         return TooltipPlacement.spaceBesideCursor(screenWidth, mouseX);

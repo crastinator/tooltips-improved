@@ -22,7 +22,6 @@ import net.minecraft.client.model.object.banner.BannerFlagModel;
 /*import net.minecraft.client.model.geom.ModelPart;
 *///?}
 
-/** The drawing the tooltip previews need, so what changes between versions stays in this one class. */
 final class PreviewCanvas {
     static final int BANNER_WIDTH = 20, BANNER_HEIGHT = 40;
     private static final int MAP_TEXTURE_SIZE = 128;
@@ -101,7 +100,6 @@ final class PreviewCanvas {
         *///?}
     }
 
-    /** Draws a banner's flag, {@link #BANNER_WIDTH} by {@link #BANNER_HEIGHT}, as the loom's result slot does. */
     void banner(DyeColor base, BannerPatternLayers layers, int x, int y) {
         //? if >=26.1 {
         graphics.bannerPattern(flag(), base, layers, x, y, x + BANNER_WIDTH, y + BANNER_HEIGHT);

@@ -27,7 +27,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 /*import net.minecraft.client.gui.GuiGraphics;
 *///?}
 
-/** Fades the tooltip background and border by the configured opacity. */
 @Mixin(TooltipRenderUtil.class)
 public abstract class TooltipBackgroundMixin {
     //? if >=26.1 {

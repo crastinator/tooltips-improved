@@ -46,7 +46,6 @@ public final class TooltipsImprovedKeys {
             && isHeld(key.getValue());
     }
 
-    /** Whether a text field on the open screen has focus, so key presses are typing. */
     public static boolean isTyping() {
         //? if >=26.1 {
         net.minecraft.client.gui.screens.Screen screen = Minecraft.getInstance().gui.screen();

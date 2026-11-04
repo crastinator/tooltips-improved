@@ -12,11 +12,6 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-/**
- * The settings screen, opened from Mod Menu on Fabric and from the mod list on NeoForge and Forge.
- * Built from vanilla's options widgets so it looks like the rest of the settings menus.
- * Changes apply straight away and are written to the config file when the screen closes.
- */
 public class TooltipsImprovedScreen extends OptionsSubScreen {
     private static final String KEY = TooltipsImproved.MOD_ID + ".config.";
     private final TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
@@ -94,7 +89,6 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
         if (changed) config.save();
     }
 
-    /** Wraps an option's change handler so the screen knows to save. */
     private <T> Consumer<T> track(Consumer<T> onChange) {
         return value -> {
             changed = true;
@@ -125,7 +119,6 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
             new OptionInstance.IntRange(min, max), Math.max(min, Math.min(max, value)), track(onChange)::accept);
     }
 
-    /** A 0 to 1 setting shown as a percentage, no lower than {@code minPercent}. */
     private OptionInstance<Integer> percent(String name, int minPercent, double value, Consumer<Double> onChange) {
         Consumer<Double> tracked = track(onChange);
         return new OptionInstance<>(KEY + name, tooltip(name),

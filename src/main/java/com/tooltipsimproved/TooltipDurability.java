@@ -13,15 +13,12 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 
-/** Builds the line showing how much durability an item has left. */
 public final class TooltipDurability {
     private static final String KEY = TooltipsImproved.MOD_ID + ".durability.";
     /** Vanilla's own line, shown for damaged items with advanced tooltips (F3+H) on. */
     private static final String VANILLA_KEY = "item.durability";
 
     /**
-     * @param lines the tooltip so far, to check for vanilla's line
-     * @param shift whether Shift counts as held
      * @return the line to add, or {@code null} for none
      */
     public static Component line(ItemStack stack, List<Component> lines, boolean shift) {

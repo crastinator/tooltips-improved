@@ -45,7 +45,6 @@ public class TooltipsImproved {
         /*return net.minecraft.client.gui.screens.Screen.hasShiftDown();*/
     }
 
-    /** Builds the single trim line, e.g. "Sentry Armor Trim (Iron)". */
     public static Component trimLine(Holder<TrimPattern> pattern, Holder<TrimMaterial> material) {
         Component materialName = material.value().description();
         Style materialStyle = materialName.getStyle();

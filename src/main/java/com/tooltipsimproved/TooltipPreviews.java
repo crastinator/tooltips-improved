@@ -36,7 +36,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * size, so wrapping, placement and scrolling treat them like any other part of a tooltip.
  */
 public final class TooltipPreviews {
-    /** What's below an image, as vanilla's own tooltip images leave. */
     private static final int BOTTOM_GAP = 2;
 
     /** A preview's data; {@code mixin/ClientTooltipComponentMixin} turns it into what's drawn. */
@@ -44,11 +43,6 @@ public final class TooltipPreviews {
         ClientTooltipComponent renderer();
     }
 
-    /**
-     * The preview to show for an item, if any.
-     *
-     * @param shift whether Shift counts as held
-     */
     public static Optional<TooltipComponent> forStack(ItemStack stack, boolean shift) {
         TooltipsImprovedConfig.Previews config = TooltipsImprovedConfig.get().previews;
         if (config.showWhen == TooltipsImprovedConfig.ShowWhen.SHIFT_HELD && !shift) return Optional.empty();
@@ -113,8 +107,6 @@ public final class TooltipPreviews {
         *///?}
     }
 
-    // Written books
-
     private static final int PAGE_TEXT_WIDTH = 114, PAGE_PADDING = 4;
     private static final int PAGE_BACKGROUND = 0xFFF3E9CF, PAGE_BORDER = 0xFF8A7350, PAGE_TEXT = 0xFF000000;
 
@@ -124,7 +116,6 @@ public final class TooltipPreviews {
     private static int splitLimit;
     private static List<FormattedCharSequence> splitLines = List.of();
 
-    /** @param lines the lines of the first page to show, already limited to the configured count */
     record BookPreview(List<FormattedCharSequence> lines) implements Preview {
         @Override
         public ClientTooltipComponent renderer() {
@@ -174,8 +165,6 @@ public final class TooltipPreviews {
         splitLines = List.of();
     }
 
-    // Filled maps
-
     /** @param data the map's contents, {@code null} when the server hasn't sent them */
     record MapPreview(MapId id, MapItemSavedData data, int size) implements Preview {
         private static final int NOT_LOADED_COLOR = 0xFFAAAAAA;
@@ -211,8 +200,6 @@ public final class TooltipPreviews {
         return new MapPreview(id, level == null ? null : MapItem.getSavedData(id, level), size);
     }
 
-    // Banners and shields
-
     record BannerPreview(DyeColor base, BannerPatternLayers layers) implements Preview {
         @Override
         public ClientTooltipComponent renderer() {
@@ -242,8 +229,6 @@ public final class TooltipPreviews {
         DyeColor base = stack.getItem() instanceof BannerItem banner ? banner.getColor() : stack.getOrDefault(DataComponents.BASE_COLOR, DyeColor.WHITE);
         return new BannerPreview(base, layers);
     }
-
-    // Firework stars and rockets
 
     private static final int ICON_SIZE = 7, SWATCH_SIZE = 5, SWATCH_GAP = 1, FADE_GAP = 4, ROW_GAP = 1;
     // Commands can make these as long as they like; survival tops out well below both
@@ -290,7 +275,6 @@ public final class TooltipPreviews {
             drawIcon(canvas, explosion.shape(), colors.isEmpty() ? DEFAULT_ICON_COLOR : opaque(colors.getInt(0)), x, y);
             int at = drawSwatches(canvas, colors, x + ICON_SIZE + SWATCH_GAP, y);
             if (explosion.fadeColors().isEmpty()) return;
-            // A small dash between the colors and the ones they fade to
             canvas.fill(at, y + ICON_SIZE / 2, at + FADE_GAP - SWATCH_GAP, y + ICON_SIZE / 2 + 1, FADE_MARK_COLOR);
             drawSwatches(canvas, explosion.fadeColors(), at + FADE_GAP, y);
         }
