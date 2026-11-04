@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -44,9 +43,10 @@ public final class TooltipPreviews {
     }
 
     public static Optional<TooltipComponent> forStack(ItemStack stack, boolean shift) {
+        // Other mods may ask off the render thread, where neither the font nor the page cache is safe to use
+        if (!Minecraft.getInstance().isSameThread()) return Optional.empty();
         TooltipsImprovedConfig.Previews config = TooltipsImprovedConfig.get().previews;
         if (config.showWhen == TooltipsImprovedConfig.ShowWhen.SHIFT_HELD && !shift) return Optional.empty();
-        if (TooltipExtras.hidesTooltip(stack)) return Optional.empty();
 
         Preview preview = null;
         if (config.books) preview = book(stack, config.bookLines);
@@ -54,15 +54,6 @@ public final class TooltipPreviews {
         if (preview == null && config.banners) preview = banner(stack);
         if (preview == null && config.fireworks) preview = fireworks(stack);
         return Optional.ofNullable(preview);
-    }
-
-    /** Whether the item leaves a component's tooltip visible; before 1.21.5 there's one setting for them all. */
-    private static boolean shows(ItemStack stack, DataComponentType<?> type) {
-        //? if >=1.21.5 {
-        return stack.getOrDefault(DataComponents.TOOLTIP_DISPLAY, net.minecraft.world.item.component.TooltipDisplay.DEFAULT).shows(type);
-        //?} else {
-        /*return !stack.has(DataComponents.HIDE_ADDITIONAL_TOOLTIP);
-        *///?}
     }
 
     private abstract static class Renderer implements ClientTooltipComponent {
@@ -113,8 +104,11 @@ public final class TooltipPreviews {
     // Splitting a page into lines is too slow for every frame and the hovered book rarely changes.
     // Compared by identity as a stack keeps the same component, and comparing pages by value is slow too.
     private static Component splitPage;
-    private static int splitLimit;
+    private static SplitSettings splitSettings;
     private static List<FormattedCharSequence> splitLines = List.of();
+
+    /** Includes what changes how a page splits without closing a screen, which is when the cache is cleared. */
+    private record SplitSettings(int maxLines, boolean unicodeFont, boolean japaneseGlyphs, String language) {}
 
     record BookPreview(List<FormattedCharSequence> lines) implements Preview {
         @Override
@@ -145,16 +139,19 @@ public final class TooltipPreviews {
 
     private static Preview book(ItemStack stack, int maxLines) {
         WrittenBookContent content = stack.get(DataComponents.WRITTEN_BOOK_CONTENT);
-        if (content == null || !shows(stack, DataComponents.WRITTEN_BOOK_CONTENT)) return null;
-        List<Component> pages = content.getPages(Minecraft.getInstance().isTextFilteringEnabled());
+        if (content == null || !TooltipExtras.shows(stack, DataComponents.WRITTEN_BOOK_CONTENT)) return null;
+        Minecraft minecraft = Minecraft.getInstance();
+        List<Component> pages = content.getPages(minecraft.isTextFilteringEnabled());
         if (pages.isEmpty()) return null;
 
         Component page = pages.get(0);
-        if (page != splitPage || maxLines != splitLimit) {
-            List<FormattedCharSequence> lines = Minecraft.getInstance().font.split(page, PAGE_TEXT_WIDTH);
+        SplitSettings settings = new SplitSettings(maxLines, minecraft.options.forceUnicodeFont().get(),
+            minecraft.options.japaneseGlyphVariants().get(), minecraft.getLanguageManager().getSelected());
+        if (page != splitPage || !settings.equals(splitSettings)) {
+            List<FormattedCharSequence> lines = minecraft.font.split(page, PAGE_TEXT_WIDTH);
             splitLines = List.copyOf(lines.subList(0, Math.min(lines.size(), maxLines)));
             splitPage = page;
-            splitLimit = maxLines;
+            splitSettings = settings;
         }
         return splitLines.isEmpty() ? null : new BookPreview(splitLines);
     }
@@ -194,7 +191,7 @@ public final class TooltipPreviews {
 
     private static Preview map(ItemStack stack, int size) {
         MapId id = stack.get(DataComponents.MAP_ID);
-        if (id == null || !(stack.getItem() instanceof MapItem) || !shows(stack, DataComponents.MAP_ID)) return null;
+        if (id == null || !(stack.getItem() instanceof MapItem) || !TooltipExtras.shows(stack, DataComponents.MAP_ID)) return null;
         // The client only knows maps it's been sent: held, in a frame nearby, or recently viewed
         Level level = Minecraft.getInstance().level;
         return new MapPreview(id, level == null ? null : MapItem.getSavedData(id, level), size);
@@ -225,7 +222,7 @@ public final class TooltipPreviews {
     private static Preview banner(ItemStack stack) {
         BannerPatternLayers layers = stack.get(DataComponents.BANNER_PATTERNS);
         // A plain banner shows nothing its icon doesn't
-        if (layers == null || layers.layers().isEmpty() || !shows(stack, DataComponents.BANNER_PATTERNS)) return null;
+        if (layers == null || layers.layers().isEmpty() || !TooltipExtras.shows(stack, DataComponents.BANNER_PATTERNS)) return null;
         DyeColor base = stack.getItem() instanceof BannerItem banner ? banner.getColor() : stack.getOrDefault(DataComponents.BASE_COLOR, DyeColor.WHITE);
         return new BannerPreview(base, layers);
     }
@@ -309,6 +306,8 @@ public final class TooltipPreviews {
                 case STAR -> STAR_ICON;
                 case CREEPER -> CREEPER_ICON;
                 case BURST -> BURST_ICON;
+                // NeoForge lets mods add shapes
+                default -> LARGE_BALL_ICON;
             };
         }
     }
@@ -361,9 +360,9 @@ public final class TooltipPreviews {
 
     private static Preview fireworks(ItemStack stack) {
         FireworkExplosion star = stack.get(DataComponents.FIREWORK_EXPLOSION);
-        if (star != null && shows(stack, DataComponents.FIREWORK_EXPLOSION)) return new FireworkPreview(List.of(star));
+        if (star != null && TooltipExtras.shows(stack, DataComponents.FIREWORK_EXPLOSION)) return new FireworkPreview(List.of(star));
         Fireworks rocket = stack.get(DataComponents.FIREWORKS);
-        if (rocket == null || rocket.explosions().isEmpty() || !shows(stack, DataComponents.FIREWORKS)) return null;
+        if (rocket == null || rocket.explosions().isEmpty() || !TooltipExtras.shows(stack, DataComponents.FIREWORKS)) return null;
         List<FireworkExplosion> explosions = rocket.explosions();
         return new FireworkPreview(explosions.subList(0, Math.min(explosions.size(), MAX_ROWS)));
     }

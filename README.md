@@ -32,7 +32,7 @@ The wheel only moves a tooltip along a direction it doesn't fit in, and otherwis
 
 **Exact durability.** Damaged items show `Durability: 312 / 1561`, as a fraction, a percentage or both, with the numbers colored like the durability bar. It stays out of the way when F3+H already shows vanilla's line, and on unbreakable items.
 
-**Equipment comparison.** Armor, weapons and tools show how their stats differ from what you have equipped, under a `Compared to equipped: Iron Sword` line: `+1 Attack Damage` in green, `-0.4 Attack Speed` in red. Amounts match what vanilla's tooltips show, so they add up with the numbers above them. Enchantments aren't compared yet.
+**Equipment comparison.** Armor, weapons and tools show how their stats differ from what you have equipped, under a `Compared to equipped: Iron Sword` line: `+1 Attack Damage` in green, `-0.4 Attack Speed` in red. Amounts are the real change, so a sword against an empty hand shows `+5 Attack Damage` and `-2.4 Attack Speed`. Stats an item hides aren't compared, and enchantments aren't compared yet.
 
 **Content previews.** Written books show the start of their first page, filled maps their image (or "Map not loaded" if the server hasn't sent it), banners and shields their pattern, and firework stars and rockets icons for each explosion's shape, colors and fade colors.
 

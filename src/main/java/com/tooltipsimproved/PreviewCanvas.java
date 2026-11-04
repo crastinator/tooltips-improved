@@ -84,16 +84,26 @@ final class PreviewCanvas {
 
     void map(MapId id, MapItemSavedData data, int x, int y, int size) {
         //? if >=1.21.11 {
+        var state = new net.minecraft.client.renderer.state.MapRenderState();
         // Only uploads the texture again if the map has changed
-        var texture = Minecraft.getInstance().getMapTextureManager().prepareMapTexture(id, data);
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, size, size,
-            MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE);
+        Minecraft.getInstance().getMapRenderer().extractRenderState(id, data, state);
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(x, y);
+        pose.scale(size / (float) MAP_TEXTURE_SIZE, size / (float) MAP_TEXTURE_SIZE);
+        //? if >=26.1 {
+        graphics.map(state);
+        //?} else {
+        /*graphics.submitMapRenderState(state);
+        *///?}
+        pose.popMatrix();
         //?} else {
         /*var pose = graphics.pose();
         pose.pushPose();
-        // Vanilla draws maps just behind their own position, which would put them behind the tooltip's background
+        // Vanilla draws for an item frame, stacking the map and then its markers away from the viewer, so a
+        // GUI needs depth flipped and a step forward, or they'd end up behind the tooltip's background and the map
         pose.translate(x, y, 1);
-        pose.scale(size / (float) MAP_TEXTURE_SIZE, size / (float) MAP_TEXTURE_SIZE, 1);
+        pose.scale(size / (float) MAP_TEXTURE_SIZE, size / (float) MAP_TEXTURE_SIZE, -1);
         Minecraft.getInstance().gameRenderer.getMapRenderer().render(pose, graphics.bufferSource(), id, data, true, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT);
         pose.popPose();
         graphics.flush();

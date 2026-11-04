@@ -422,10 +422,6 @@ public final class SelfTest {
         require(hidden.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL).isEmpty(), "added to a hidden tooltip");
     }
 
-    private static double playerBase(net.minecraft.core.Holder<Attribute> attribute) {
-        return attribute == Attributes.ATTACK_DAMAGE ? 1 : attribute == Attributes.ATTACK_SPEED ? 4 : 0;
-    }
-
     private static ItemAttributeModifiers weapon(double damage, double speed) {
         return ItemAttributeModifiers.builder()
             .add(Attributes.ATTACK_DAMAGE, new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, damage, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
@@ -451,31 +447,39 @@ public final class SelfTest {
         ItemAttributeModifiers sword = weapon(5, -2.4), axe = weapon(8, -3.2);
         AttributeModifier.Operation add = AttributeModifier.Operation.ADD_VALUE;
 
-        List<TooltipComparison.AttributeDelta> swordVsAxe = TooltipComparison.deltas(sword, axe, EquipmentSlot.MAINHAND, SelfTest::playerBase);
+        List<TooltipComparison.AttributeDelta> swordVsAxe = TooltipComparison.deltas(sword, axe, EquipmentSlot.MAINHAND);
         require(swordVsAxe.size() == 2, "got " + swordVsAxe);
         requireDelta(swordVsAxe, Attributes.ATTACK_DAMAGE, -3);
         requireDelta(swordVsAxe, Attributes.ATTACK_SPEED, 0.8);
 
-        // Nothing equipped: every stat is a plus, at the value vanilla shows (6 and 1.6, not 5 and -2.4)
-        List<TooltipComparison.AttributeDelta> swordVsEmpty = TooltipComparison.deltas(sword, ItemAttributeModifiers.EMPTY, EquipmentSlot.MAINHAND, SelfTest::playerBase);
-        requireDelta(swordVsEmpty, Attributes.ATTACK_DAMAGE, 6);
-        requireDelta(swordVsEmpty, Attributes.ATTACK_SPEED, 1.6);
+        // Nothing equipped: the real change from bare hands, not the 6 and 1.6 vanilla displays
+        List<TooltipComparison.AttributeDelta> swordVsEmpty = TooltipComparison.deltas(sword, ItemAttributeModifiers.EMPTY, EquipmentSlot.MAINHAND);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_DAMAGE, 5);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_SPEED, -2.4);
 
         ItemAttributeModifiers lucky = armor(Attributes.LUCK, 1, add, EquipmentSlotGroup.MAINHAND);
-        requireDelta(TooltipComparison.deltas(lucky, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, 1);
-        requireDelta(TooltipComparison.deltas(sword, lucky, EquipmentSlot.MAINHAND, SelfTest::playerBase), Attributes.LUCK, -1);
+        requireDelta(TooltipComparison.deltas(lucky, sword, EquipmentSlot.MAINHAND), Attributes.LUCK, 1);
+        requireDelta(TooltipComparison.deltas(sword, lucky, EquipmentSlot.MAINHAND), Attributes.LUCK, -1);
 
         ItemAttributeModifiers knockback = armor(Attributes.KNOCKBACK_RESISTANCE, 0.1, add, EquipmentSlotGroup.CHEST);
-        requireDelta(TooltipComparison.deltas(knockback, ItemAttributeModifiers.EMPTY, EquipmentSlot.CHEST, SelfTest::playerBase), Attributes.KNOCKBACK_RESISTANCE, 1);
+        requireDelta(TooltipComparison.deltas(knockback, ItemAttributeModifiers.EMPTY, EquipmentSlot.CHEST), Attributes.KNOCKBACK_RESISTANCE, 1);
         ItemAttributeModifiers flat = armor(Attributes.ARMOR, 2, add, EquipmentSlotGroup.CHEST);
         ItemAttributeModifiers percent = armor(Attributes.ARMOR, 0.5, AttributeModifier.Operation.ADD_MULTIPLIED_BASE, EquipmentSlotGroup.CHEST);
-        List<TooltipComparison.AttributeDelta> mixed = TooltipComparison.deltas(flat, percent, EquipmentSlot.CHEST, SelfTest::playerBase);
+        List<TooltipComparison.AttributeDelta> mixed = TooltipComparison.deltas(flat, percent, EquipmentSlot.CHEST);
         require(mixed.size() == 2, "operations were merged: " + mixed);
 
-        require(TooltipComparison.deltas(sword, sword, EquipmentSlot.MAINHAND, SelfTest::playerBase).isEmpty(), "identical items differ");
+        require(TooltipComparison.deltas(sword, sword, EquipmentSlot.MAINHAND).isEmpty(), "identical items differ");
         require(TooltipComparison.deltas(armor(Attributes.ARMOR, 0.1 + 0.2, add, EquipmentSlotGroup.HEAD), armor(Attributes.ARMOR, 0.3, add, EquipmentSlotGroup.HEAD),
-            EquipmentSlot.HEAD, SelfTest::playerBase).isEmpty(), "floating point noise was shown");
-        require(TooltipComparison.deltas(flat, ItemAttributeModifiers.EMPTY, EquipmentSlot.HEAD, SelfTest::playerBase).isEmpty(), "counted another slot's modifier");
+            EquipmentSlot.HEAD).isEmpty(), "floating point noise was shown");
+        require(TooltipComparison.deltas(flat, ItemAttributeModifiers.EMPTY, EquipmentSlot.HEAD).isEmpty(), "counted another slot's modifier");
+
+        //? if >=1.21.5 {
+        var modifier = new AttributeModifier(TooltipsImproved.id("test"), 5, add);
+        for (var display : List.of(ItemAttributeModifiers.Display.hidden(), ItemAttributeModifiers.Display.override(Component.literal("Secret")))) {
+            var concealed = new ItemAttributeModifiers(List.of(new ItemAttributeModifiers.Entry(Attributes.ARMOR, modifier, EquipmentSlotGroup.CHEST, display)));
+            require(TooltipComparison.deltas(concealed, ItemAttributeModifiers.EMPTY, EquipmentSlot.CHEST).isEmpty(), "showed a modifier displayed as " + display);
+        }
+        //?}
     }
 
     private static void checkComparisonSlot() {
@@ -498,7 +502,7 @@ public final class SelfTest {
             .add(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(TooltipsImproved.id("toughness"), 2, add), EquipmentSlotGroup.CHEST).build());
         equipped.set(DataComponents.ATTRIBUTE_MODIFIERS, armor(Attributes.ARMOR, 8, add, EquipmentSlotGroup.CHEST));
 
-        List<Component> lines = TooltipComparison.lines(hovered, equipped, EquipmentSlot.CHEST, SelfTest::playerBase);
+        List<Component> lines = TooltipComparison.lines(hovered, equipped, EquipmentSlot.CHEST);
         require(lines.size() == 4, "got " + lines);
         require(lines.get(1).getString().startsWith("Compared to equipped: "), "header " + lines.get(1).getString());
         require(lines.get(2).getString().equals("-2 Armor"), "got '" + lines.get(2).getString() + "'");
@@ -506,17 +510,28 @@ public final class SelfTest {
         require(TextColor.fromLegacyFormat(ChatFormatting.RED).equals(lines.get(2).getStyle().getColor()), "worse isn't red");
         require(TextColor.fromLegacyFormat(ChatFormatting.GREEN).equals(lines.get(3).getStyle().getColor()), "better isn't green");
 
-        List<Component> empty = TooltipComparison.lines(hovered, ItemStack.EMPTY, EquipmentSlot.CHEST, SelfTest::playerBase);
+        List<Component> empty = TooltipComparison.lines(hovered, ItemStack.EMPTY, EquipmentSlot.CHEST);
         require(empty.get(1).getString().equals("Compared to equipped: Nothing"), empty.get(1).getString());
         require(empty.stream().skip(2).allMatch(line -> line.getString().startsWith("+")), "not all plus: " + empty);
 
-        require(TooltipComparison.lines(hovered, hovered, EquipmentSlot.CHEST, SelfTest::playerBase).isEmpty(), "compared the equipped stack to itself");
+        require(TooltipComparison.lines(hovered, hovered, EquipmentSlot.CHEST).isEmpty(), "compared the equipped stack to itself");
         ItemStack same = hovered.copy();
-        require(TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST, SelfTest::playerBase).isEmpty(), "identical stats weren't hidden");
+        require(TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST).isEmpty(), "identical stats weren't hidden");
         config.comparison.hideIdentical = false;
-        List<Component> shown = TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST, SelfTest::playerBase);
+        List<Component> shown = TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST);
         require(shown.size() == 3 && shown.get(2).getString().equals("No difference in stats"), "got " + shown);
         require(TooltipComparison.lines(hovered, (net.minecraft.world.entity.player.Player) null, false).isEmpty(), "needs a player");
+
+        ItemStack secret = equipped.copy();
+        //? if >=1.21.5 {
+        var hiddenStats = new java.util.LinkedHashSet<net.minecraft.core.component.DataComponentType<?>>();
+        hiddenStats.add(DataComponents.ATTRIBUTE_MODIFIERS);
+        secret.set(DataComponents.TOOLTIP_DISPLAY, new net.minecraft.world.item.component.TooltipDisplay(false, hiddenStats));
+        //?} else {
+        /*secret.set(DataComponents.ATTRIBUTE_MODIFIERS, armor(Attributes.ARMOR, 8, add, EquipmentSlotGroup.CHEST).withTooltip(false));
+        *///?}
+        require(TooltipComparison.lines(hovered, secret, EquipmentSlot.CHEST).isEmpty(), "gave away the equipped item's hidden stats");
+        require(TooltipComparison.lines(secret, hovered, EquipmentSlot.CHEST).isEmpty(), "gave away the hovered item's hidden stats");
     }
 
     private static ItemStack book(String... pages) {
@@ -630,6 +645,32 @@ public final class SelfTest {
         *///?}
         require(TooltipPreviews.forStack(hidden, false).isEmpty(), "shown on a hidden tooltip");
 
+        ItemStack star = star();
+        boolean[] offThread = {false};
+        Thread other = new Thread(() -> offThread[0] = TooltipPreviews.forStack(star, false).isPresent());
+        other.start();
+        try {
+            other.join();
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
+        require(!offThread[0], "built a preview off the render thread");
+
+        var unicode = Minecraft.getInstance().options.forceUnicodeFont();
+        boolean wasUnicode = unicode.get();
+        try {
+            var cached = bookLines(long1);
+            require(bookLines(long1) == cached, "split the same page again");
+            unicode.set(!wasUnicode);
+            require(bookLines(long1) != cached, "kept lines split with the old font");
+        } finally {
+            unicode.set(wasUnicode);
+        }
+
+        String key = TooltipsImproved.MOD_ID + ".config.durability.format.";
+        require(Component.translatable(key + "percent").getString().equals("20%"), "percent label");
+        require(Component.translatable(key + "both").getString().equals("312 / 1561 (20%)"), "both label");
+
         java.nio.file.Path file;
         try {
             file = Files.createTempFile(TooltipsImproved.MOD_ID, ".json");
@@ -640,6 +681,10 @@ public final class SelfTest {
         TooltipsImprovedConfig loaded = TooltipsImprovedConfig.load(file);
         require(loaded.previews.mapSize == TooltipsImprovedConfig.MAX_MAP_SIZE && loaded.previews.bookLines == TooltipsImprovedConfig.MIN_BOOK_LINES, "sizes weren't limited");
         require(loaded.durability != null && loaded.comparison.showWhen == TooltipsImprovedConfig.ShowWhen.ALWAYS, "a bad section wasn't fixed");
+    }
+
+    private static List<net.minecraft.util.FormattedCharSequence> bookLines(ItemStack book) {
+        return ((TooltipPreviews.BookPreview) TooltipPreviews.forStack(book, false).orElseThrow()).lines();
     }
 
     private static int height(ClientTooltipComponent line) {

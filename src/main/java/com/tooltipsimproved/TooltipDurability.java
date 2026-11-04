@@ -1,17 +1,13 @@
 package com.tooltipsimproved;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-
-//? if >=1.21.5 {
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.component.TooltipDisplay;
-//?}
 
 public final class TooltipDurability {
     private static final String KEY = TooltipsImproved.MOD_ID + ".durability.";
@@ -30,7 +26,7 @@ public final class TooltipDurability {
             case WHEN_DAMAGED -> stack.isDamaged();
             case SHIFT_HELD -> shift;
         };
-        if (!wanted || !shown(stack) || hasVanillaLine(lines)) return null;
+        if (!wanted || !TooltipExtras.shows(stack, DataComponents.DAMAGE) || hasVanillaLine(lines)) return null;
 
         int max = stack.getMaxDamage();
         int remaining = Math.max(0, max - stack.getDamageValue());
@@ -53,15 +49,6 @@ public final class TooltipDurability {
     private static MutableComponent number(int value, ItemStack stack, TooltipsImprovedConfig.Durability config) {
         MutableComponent number = Component.literal(Integer.toString(value));
         return config.colorByRemaining ? number.withColor(stack.getBarColor()) : number;
-    }
-
-    /** Whether the item's tooltip_display component leaves its damage visible; older versions can't hide it. */
-    private static boolean shown(ItemStack stack) {
-        //? if >=1.21.5 {
-        return stack.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT).shows(DataComponents.DAMAGE);
-        //?} else {
-        /*return true;
-        *///?}
     }
 
     private static boolean hasVanillaLine(List<Component> lines) {
