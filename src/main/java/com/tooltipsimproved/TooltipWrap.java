@@ -56,7 +56,10 @@ public final class TooltipWrap {
         int limit = limit(config, minecraft, followsCursor);
 
         boolean unicodeFont = minecraft.options.forceUnicodeFont().get();
+        //? if >=1.20.5 {
         boolean japaneseGlyphs = minecraft.options.japaneseGlyphVariants().get();
+        //?} else
+        //boolean japaneseGlyphs = false;
 
         List<ClientTooltipComponent> wrapped = null;
         for (int i = 0; i < lines.size(); i++) {

@@ -25,7 +25,10 @@ import java.util.Optional;
 @Mixin(ItemStack.class)
 public abstract class ItemStackMixin {
     @Inject(method = "getTooltipLines", at = @At("RETURN"), cancellable = true)
+    //? if >=1.20.5 {
     private void tooltipsimproved$addLines(Item.TooltipContext context, Player player, TooltipFlag flag, CallbackInfoReturnable<List<Component>> cir) {
+    //?} else
+    //private void tooltipsimproved$addLines(Player player, TooltipFlag flag, CallbackInfoReturnable<List<Component>> cir) {
         cir.setReturnValue(TooltipExtras.addLines((ItemStack) (Object) this, cir.getReturnValue(), player, flag));
     }
 

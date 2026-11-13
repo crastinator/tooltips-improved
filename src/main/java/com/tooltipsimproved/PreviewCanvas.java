@@ -7,9 +7,17 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+
+//? if >=1.20.5 {
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.saveddata.maps.MapId;
-import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+//?} else {
+/*import com.mojang.datafixers.util.Pair;
+import net.minecraft.core.Holder;
+import net.minecraft.world.level.block.entity.BannerPattern;
+import java.util.List;
+*///?}
 
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -82,7 +90,10 @@ final class PreviewCanvas {
         text(font, text.getVisualOrderText(), x, y, argb);
     }
 
+    //? if >=1.20.5 {
     void map(MapId id, MapItemSavedData data, int x, int y, int size) {
+    //?} else
+    //void map(int id, MapItemSavedData data, int x, int y, int size) {
         //? if >=1.21.11 {
         var state = new net.minecraft.client.renderer.state.MapRenderState();
         // Only uploads the texture again if the map has changed
@@ -110,7 +121,10 @@ final class PreviewCanvas {
         *///?}
     }
 
+    //? if >=1.20.5 {
     void banner(DyeColor base, BannerPatternLayers layers, int x, int y) {
+    //?} else
+    //void banner(DyeColor base, List<Pair<Holder<BannerPattern>, DyeColor>> layers, int x, int y) {
         //? if >=26.1 {
         graphics.bannerPattern(flag(), base, layers, x, y, x + BANNER_WIDTH, y + BANNER_HEIGHT);
         //?} elif >=1.21.11 {
@@ -128,7 +142,10 @@ final class PreviewCanvas {
         com.mojang.blaze3d.platform.Lighting.setupForFlatItems();
         net.minecraft.client.renderer.blockentity.BannerRenderer.renderPatterns(pose, graphics.bufferSource(),
             net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
+            //? if >=1.20.5 {
             flag, net.minecraft.client.resources.model.ModelBakery.BANNER_BASE, true, base, layers);
+            //?} else
+            //flag, net.minecraft.client.resources.model.ModelBakery.BANNER_BASE, true, layers);
         pose.popPose();
         graphics.flush();
         com.mojang.blaze3d.platform.Lighting.setupFor3DItems();

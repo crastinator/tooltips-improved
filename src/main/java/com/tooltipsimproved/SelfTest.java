@@ -14,19 +14,12 @@ import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.component.FireworkExplosion;
-import net.minecraft.world.item.component.Fireworks;
-import net.minecraft.world.item.component.ItemAttributeModifiers;
-import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.block.entity.BannerPatterns;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.item.Item;
@@ -41,6 +34,28 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+//? if >=1.20.5 {
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
+//?} else {
+/*import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.FireworkRocketItem;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.world.item.WrittenBookItem;
+import net.minecraft.world.level.block.entity.BannerBlockEntity;
+import net.minecraft.world.level.block.entity.BannerPattern;
+import java.util.Optional;
+*///?}
 //? if >=1.21.5 {
 import net.minecraft.core.component.DataComponentMap;
 //?}
@@ -80,7 +95,10 @@ public final class SelfTest {
         }));
         check("trim unfolded when disabled", () -> withField(() -> config.foldTrims = false, () -> {
             List<Component> lines = trimTooltip();
+            //? if >=1.20.5 {
             require(lines.size() == 3, "got " + lines.size() + " lines");
+            //?} else
+            //require(lines.isEmpty(), "folded anyway: " + lines);
         }));
         check("durability line formats and colors", () -> withField(() -> {
             config.durability.enabled = true;
@@ -305,7 +323,11 @@ public final class SelfTest {
             /*net.minecraft.client.gui.GuiGraphics.class,
             *///?}
             net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil.class,
-            net.minecraft.client.gui.components.Tooltip.class, net.minecraft.client.gui.components.WidgetTooltipHolder.class)) {
+            //? if >=1.21 {
+            net.minecraft.client.gui.components.WidgetTooltipHolder.class,
+            //?} else
+            //net.minecraft.client.gui.components.AbstractWidget.class,
+            net.minecraft.client.gui.components.Tooltip.class)) {
             Class.forName(target.getName(), true, SelfTest.class.getClassLoader());
         }
     }
@@ -347,9 +369,19 @@ public final class SelfTest {
 
     private static ItemStack damageable(Item item, int maxDamage) {
         ItemStack stack = stack(item);
+        //? if >=1.20.5 {
         stack.set(DataComponents.MAX_DAMAGE, maxDamage);
         stack.set(DataComponents.DAMAGE, 0);
+        //?} else
+        //require(stack.getMaxDamage() == maxDamage, "max damage " + stack.getMaxDamage());
         return stack;
+    }
+
+    private static List<Component> tooltip(ItemStack stack, TooltipFlag flag) {
+        //? if >=1.20.5 {
+        return stack.getTooltipLines(Item.TooltipContext.EMPTY, null, flag);
+        //?} else
+        //return stack.getTooltipLines(null, flag);
     }
 
     private static List<Component> trimTooltip() {
@@ -360,8 +392,12 @@ public final class SelfTest {
         List<Component> lines = new ArrayList<>();
         //? if >=1.21.5 {
         trim.addToTooltip(Item.TooltipContext.of(registries), lines::add, TooltipFlag.NORMAL, DataComponentMap.EMPTY);
-        //?} else {
+        //?} elif >=1.20.5 {
         /*trim.addToTooltip(Item.TooltipContext.of(registries), lines::add, TooltipFlag.NORMAL);
+        *///?} else {
+        /*// Vanilla reads the trim off a stack with a world's registries, which the title screen doesn't have,
+        // so this checks the fold the hook applies once it has the trim
+        TooltipsImproved.foldTrim(Optional.of(trim), lines);
         *///?}
         return lines;
     }
@@ -394,9 +430,10 @@ public final class SelfTest {
         ItemStack unbreakable = damageable(Items.IRON_SWORD, 250);
         //? if >=1.21.5 {
         unbreakable.set(DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
-        //?} else {
+        //?} elif >=1.20.5 {
         /*unbreakable.set(DataComponents.UNBREAKABLE, new net.minecraft.world.item.component.Unbreakable(true));
-        *///?}
+        *///?} else
+        //unbreakable.getOrCreateTag().putBoolean("Unbreakable", true);
         require(TooltipDurability.line(unbreakable, List.of(), false) == null, "shown on an unbreakable item");
         config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.SHIFT_HELD;
         require(TooltipDurability.line(damaged, List.of(), false) == null, "shown without Shift");
@@ -409,19 +446,22 @@ public final class SelfTest {
         config.durability.showWhen = TooltipsImprovedConfig.DurabilityShowWhen.ALWAYS;
         config.durability.format = TooltipsImprovedConfig.DurabilityFormat.FRACTION;
         String expected = (damaged.getMaxDamage() - 10) + " / " + damaged.getMaxDamage();
-        List<Component> lines = damaged.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL);
+        List<Component> lines = tooltip(damaged, TooltipFlag.NORMAL);
         require(lines.get(lines.size() - 1).getString().contains(expected), "hook added no line: " + lines);
-        List<Component> advanced = damaged.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.ADVANCED);
+        List<Component> advanced = tooltip(damaged, TooltipFlag.ADVANCED);
         require(advanced.stream().filter(line -> line.getString().contains(expected)).count() == 1, "doubled F3+H's line");
+        //? if >=1.20.5 {
         ItemStack hidden = damaged.copy();
         //? if >=1.21.5 {
         hidden.set(DataComponents.TOOLTIP_DISPLAY, new net.minecraft.world.item.component.TooltipDisplay(true, new java.util.LinkedHashSet<>()));
         //?} else {
         /*hidden.set(DataComponents.HIDE_TOOLTIP, net.minecraft.util.Unit.INSTANCE);
         *///?}
-        require(hidden.getTooltipLines(Item.TooltipContext.EMPTY, null, TooltipFlag.NORMAL).isEmpty(), "added to a hidden tooltip");
+        require(tooltip(hidden, TooltipFlag.NORMAL).isEmpty(), "added to a hidden tooltip");
+        //?}
     }
 
+    //? if >=1.20.5 {
     private static ItemAttributeModifiers weapon(double damage, double speed) {
         return ItemAttributeModifiers.builder()
             .add(Attributes.ATTACK_DAMAGE, new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, damage, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
@@ -533,7 +573,108 @@ public final class SelfTest {
         require(TooltipComparison.lines(hovered, secret, EquipmentSlot.CHEST).isEmpty(), "gave away the equipped item's hidden stats");
         require(TooltipComparison.lines(secret, hovered, EquipmentSlot.CHEST).isEmpty(), "gave away the hovered item's hidden stats");
     }
+    //?} else {
+    /*private static AttributeModifier modifier(double amount, AttributeModifier.Operation operation) {
+        return new AttributeModifier("test", amount, operation);
+    }
 
+    private static Multimap<Attribute, AttributeModifier> weapon(double damage, double speed) {
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADDITION;
+        return ImmutableMultimap.of(Attributes.ATTACK_DAMAGE, modifier(damage, add), Attributes.ATTACK_SPEED, modifier(speed, add));
+    }
+
+    private static Multimap<Attribute, AttributeModifier> stat(Attribute attribute, double amount, AttributeModifier.Operation operation) {
+        return ImmutableMultimap.of(attribute, modifier(amount, operation));
+    }
+
+    private static void requireDelta(List<TooltipComparison.AttributeDelta> deltas, Attribute attribute, double shown) {
+        for (TooltipComparison.AttributeDelta delta : deltas) {
+            if (delta.attribute() == attribute) {
+                require(Math.abs(delta.displayAmount() - shown) < 1e-6, attribute.getDescriptionId() + " was " + delta.displayAmount() + ", not " + shown);
+                return;
+            }
+        }
+        throw new AssertionError(attribute.getDescriptionId() + " missing from " + deltas);
+    }
+
+    private static void checkComparisonDeltas() {
+        Multimap<Attribute, AttributeModifier> sword = weapon(5, -2.4), axe = weapon(8, -3.2), none = ImmutableMultimap.of();
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADDITION;
+
+        List<TooltipComparison.AttributeDelta> swordVsAxe = TooltipComparison.deltas(sword, axe);
+        require(swordVsAxe.size() == 2, "got " + swordVsAxe);
+        requireDelta(swordVsAxe, Attributes.ATTACK_DAMAGE, -3);
+        requireDelta(swordVsAxe, Attributes.ATTACK_SPEED, 0.8);
+
+        // Nothing equipped: the real change from bare hands, not the 6 and 1.6 vanilla displays
+        List<TooltipComparison.AttributeDelta> swordVsEmpty = TooltipComparison.deltas(sword, none);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_DAMAGE, 5);
+        requireDelta(swordVsEmpty, Attributes.ATTACK_SPEED, -2.4);
+
+        Multimap<Attribute, AttributeModifier> lucky = stat(Attributes.LUCK, 1, add);
+        requireDelta(TooltipComparison.deltas(lucky, sword), Attributes.LUCK, 1);
+        requireDelta(TooltipComparison.deltas(sword, lucky), Attributes.LUCK, -1);
+
+        requireDelta(TooltipComparison.deltas(stat(Attributes.KNOCKBACK_RESISTANCE, 0.1, add), none), Attributes.KNOCKBACK_RESISTANCE, 1);
+        List<TooltipComparison.AttributeDelta> mixed = TooltipComparison.deltas(stat(Attributes.ARMOR, 2, add),
+            stat(Attributes.ARMOR, 0.5, AttributeModifier.Operation.MULTIPLY_BASE));
+        require(mixed.size() == 2, "operations were merged: " + mixed);
+
+        require(TooltipComparison.deltas(sword, sword).isEmpty(), "identical items differ");
+        require(TooltipComparison.deltas(stat(Attributes.ARMOR, 0.1 + 0.2, add), stat(Attributes.ARMOR, 0.3, add)).isEmpty(), "floating point noise was shown");
+        // Each slot's modifiers come from the stack, so this goes through it
+        require(TooltipComparison.lines(stack(Items.IRON_CHESTPLATE), ItemStack.EMPTY, EquipmentSlot.HEAD).isEmpty(), "counted another slot's modifier");
+    }
+
+    private static void checkComparisonSlot() {
+        Multimap<Attribute, AttributeModifier> none = ImmutableMultimap.of();
+        require(TooltipComparison.slotFor(EquipmentSlot.HEAD, stat(Attributes.ARMOR, 2, AttributeModifier.Operation.ADDITION)) == EquipmentSlot.HEAD, "armor");
+        require(TooltipComparison.slotFor(EquipmentSlot.CHEST, none) == EquipmentSlot.CHEST, "elytra-like item");
+        require(TooltipComparison.slotFor(EquipmentSlot.MAINHAND, weapon(5, -2.4)) == EquipmentSlot.MAINHAND, "weapon");
+        require(TooltipComparison.slotFor(EquipmentSlot.MAINHAND, none) == null, "a plain item was compared");
+        require(TooltipComparison.slotFor(EquipmentSlot.OFFHAND, none) == null, "a shield was compared");
+    }
+
+    private static void checkComparisonLines() {
+        TooltipsImprovedConfig config = TooltipsImprovedConfig.get();
+        AttributeModifier.Operation add = AttributeModifier.Operation.ADDITION;
+        ItemStack hovered = stack(Items.IRON_CHESTPLATE), equipped = stack(Items.DIAMOND_CHESTPLATE);
+        hovered.addAttributeModifier(Attributes.ARMOR, modifier(6, add), EquipmentSlot.CHEST);
+        hovered.addAttributeModifier(Attributes.ARMOR_TOUGHNESS, modifier(2, add), EquipmentSlot.CHEST);
+        equipped.addAttributeModifier(Attributes.ARMOR, modifier(8, add), EquipmentSlot.CHEST);
+
+        // Stacks keep their modifiers in a hash map here, so the order of the lines isn't fixed
+        List<Component> lines = TooltipComparison.lines(hovered, equipped, EquipmentSlot.CHEST);
+        require(lines.size() == 4, "got " + lines);
+        require(lines.get(1).getString().startsWith("Compared to equipped: "), "header " + lines.get(1).getString());
+        for (Component line : lines.subList(2, 4)) {
+            String text = line.getString();
+            require(text.equals("-2 Armor") || text.equals("+2 Armor Toughness"), "got '" + text + "'");
+            ChatFormatting color = text.startsWith("-") ? ChatFormatting.RED : ChatFormatting.GREEN;
+            require(TextColor.fromLegacyFormat(color).equals(line.getStyle().getColor()), text + " isn't " + color);
+        }
+        require(!lines.get(2).getString().equals(lines.get(3).getString()), "a line repeated: " + lines);
+
+        List<Component> empty = TooltipComparison.lines(hovered, ItemStack.EMPTY, EquipmentSlot.CHEST);
+        require(empty.get(1).getString().equals("Compared to equipped: Nothing"), empty.get(1).getString());
+        require(empty.stream().skip(2).allMatch(line -> line.getString().startsWith("+")), "not all plus: " + empty);
+
+        require(TooltipComparison.lines(hovered, hovered, EquipmentSlot.CHEST).isEmpty(), "compared the equipped stack to itself");
+        ItemStack same = hovered.copy();
+        require(TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST).isEmpty(), "identical stats weren't hidden");
+        config.comparison.hideIdentical = false;
+        List<Component> shown = TooltipComparison.lines(hovered, same, EquipmentSlot.CHEST);
+        require(shown.size() == 3 && shown.get(2).getString().equals("No difference in stats"), "got " + shown);
+        require(TooltipComparison.lines(hovered, (net.minecraft.world.entity.player.Player) null, false).isEmpty(), "needs a player");
+
+        ItemStack secret = equipped.copy();
+        secret.hideTooltipPart(ItemStack.TooltipPart.MODIFIERS);
+        require(TooltipComparison.lines(hovered, secret, EquipmentSlot.CHEST).isEmpty(), "gave away the equipped item's hidden stats");
+        require(TooltipComparison.lines(secret, hovered, EquipmentSlot.CHEST).isEmpty(), "gave away the hovered item's hidden stats");
+    }
+    *///?}
+
+    //? if >=1.20.5 {
     private static ItemStack book(String... pages) {
         List<net.minecraft.server.network.Filterable<Component>> filterable = new ArrayList<>();
         for (String page : pages) filterable.add(net.minecraft.server.network.Filterable.passThrough(Component.literal(page)));
@@ -561,12 +702,6 @@ public final class SelfTest {
         *///?}
     }
 
-    private static ItemStack banner() {
-        ItemStack banner = plainBanner();
-        banner.set(DataComponents.BANNER_PATTERNS, patterns());
-        return banner;
-    }
-
     private static FireworkExplosion explosion() {
         return new FireworkExplosion(FireworkExplosion.Shape.STAR, it.unimi.dsi.fastutil.ints.IntList.of(0xFF0000, 0x00FF00), it.unimi.dsi.fastutil.ints.IntList.of(0x0000FF), false, false);
     }
@@ -575,6 +710,88 @@ public final class SelfTest {
         ItemStack star = stack(Items.FIREWORK_STAR);
         star.set(DataComponents.FIREWORK_EXPLOSION, explosion());
         return star;
+    }
+
+    private static ItemStack withPatterns(ItemStack stack) {
+        stack.set(DataComponents.BANNER_PATTERNS, patterns());
+        return stack;
+    }
+
+    private static void setBase(ItemStack shield, DyeColor color) {
+        shield.set(DataComponents.BASE_COLOR, color);
+    }
+
+    private static ItemStack rocket(int explosions) {
+        ItemStack rocket = stack(Items.FIREWORK_ROCKET);
+        rocket.set(DataComponents.FIREWORKS, new Fireworks(1, java.util.Collections.nCopies(explosions, explosion())));
+        return rocket;
+    }
+
+    private static ClientTooltipComponent mapRenderer(MapItemSavedData data, int size) {
+        return new TooltipPreviews.MapPreview(new net.minecraft.world.level.saveddata.maps.MapId(1), data, size).renderer();
+    }
+    //?} else {
+    /*private static ItemStack book(String... pages) {
+        ListTag list = new ListTag();
+        for (String page : pages) list.add(StringTag.valueOf(Component.Serializer.toJson(Component.literal(page))));
+        ItemStack book = stack(Items.WRITTEN_BOOK);
+        CompoundTag tag = book.getOrCreateTag();
+        tag.putString(WrittenBookItem.TAG_TITLE, "Title");
+        tag.putString(WrittenBookItem.TAG_AUTHOR, "Author");
+        tag.put(WrittenBookItem.TAG_PAGES, list);
+        tag.putBoolean(WrittenBookItem.TAG_RESOLVED, true);
+        return book;
+    }
+
+    private static ItemStack map() {
+        ItemStack map = stack(Items.FILLED_MAP);
+        map.getOrCreateTag().putInt("map", 12345);
+        return map;
+    }
+
+    private static ItemStack plainBanner() {
+        return stack(Items.WHITE_BANNER);
+    }
+
+    private static ItemStack withPatterns(ItemStack stack) {
+        stack.getOrCreateTagElement(BlockItem.BLOCK_ENTITY_TAG).put(BannerBlockEntity.TAG_PATTERNS,
+            new BannerPattern.Builder().addPattern(BannerPatterns.STRIPE_TOP, DyeColor.RED).toListTag());
+        return stack;
+    }
+
+    private static void setBase(ItemStack shield, DyeColor color) {
+        shield.getOrCreateTagElement(BlockItem.BLOCK_ENTITY_TAG).putInt(ShieldItem.TAG_BASE_COLOR, color.getId());
+    }
+
+    private static CompoundTag explosion() {
+        CompoundTag explosion = new CompoundTag();
+        explosion.putByte(FireworkRocketItem.TAG_EXPLOSION_TYPE, (byte) FireworkRocketItem.Shape.STAR.getId());
+        explosion.putIntArray(FireworkRocketItem.TAG_EXPLOSION_COLORS, new int[] {0xFF0000, 0x00FF00});
+        explosion.putIntArray(FireworkRocketItem.TAG_EXPLOSION_FADECOLORS, new int[] {0x0000FF});
+        return explosion;
+    }
+
+    private static ItemStack star() {
+        ItemStack star = stack(Items.FIREWORK_STAR);
+        star.getOrCreateTag().put(FireworkRocketItem.TAG_EXPLOSION, explosion());
+        return star;
+    }
+
+    private static ItemStack rocket(int explosions) {
+        ListTag list = new ListTag();
+        for (int i = 0; i < explosions; i++) list.add(explosion());
+        ItemStack rocket = stack(Items.FIREWORK_ROCKET);
+        rocket.getOrCreateTagElement(FireworkRocketItem.TAG_FIREWORKS).put(FireworkRocketItem.TAG_EXPLOSIONS, list);
+        return rocket;
+    }
+
+    private static ClientTooltipComponent mapRenderer(MapItemSavedData data, int size) {
+        return new TooltipPreviews.MapPreview(1, data, size).renderer();
+    }
+    *///?}
+
+    private static ItemStack banner() {
+        return withPatterns(plainBanner());
     }
 
     private static ClientTooltipComponent renderer(ItemStack stack) {
@@ -599,18 +816,14 @@ public final class SelfTest {
 
         require(renderer(banner()).getWidth(font) == PreviewCanvas.BANNER_WIDTH, "banner width");
         require(plainBanner().getTooltipImage().isEmpty(), "preview of a plain banner");
-        ItemStack shield = stack(Items.SHIELD);
-        shield.set(DataComponents.BANNER_PATTERNS, patterns());
+        ItemStack shield = withPatterns(stack(Items.SHIELD));
         require(TooltipPreviews.forStack(shield, false).orElseThrow() instanceof TooltipPreviews.BannerPreview preview && preview.base() == DyeColor.WHITE, "shield without a base color");
-        shield.set(DataComponents.BASE_COLOR, DyeColor.BLUE);
+        setBase(shield, DyeColor.BLUE);
         require(TooltipPreviews.forStack(shield, false).orElseThrow() instanceof TooltipPreviews.BannerPreview preview && preview.base() == DyeColor.BLUE, "shield's base color");
 
         require(renderer(star()).getWidth(font) > 0, "star");
-        ItemStack rocket = stack(Items.FIREWORK_ROCKET);
-        rocket.set(DataComponents.FIREWORKS, new Fireworks(1, List.of()));
-        require(rocket.getTooltipImage().isEmpty(), "preview of a rocket with no explosions");
-        rocket.set(DataComponents.FIREWORKS, new Fireworks(1, List.of(explosion(), explosion())));
-        require(height(renderer(rocket)) > height(renderer(star())), "a second explosion took no room");
+        require(rocket(0).getTooltipImage().isEmpty(), "preview of a rocket with no explosions");
+        require(height(renderer(rocket(2))) > height(renderer(star())), "a second explosion took no room");
     }
 
     private static void checkPreviewSettings() {
@@ -640,9 +853,10 @@ public final class SelfTest {
         ItemStack hidden = star();
         //? if >=1.21.5 {
         hidden.set(DataComponents.TOOLTIP_DISPLAY, new net.minecraft.world.item.component.TooltipDisplay(true, new java.util.LinkedHashSet<>()));
-        //?} else {
+        //?} elif >=1.20.5 {
         /*hidden.set(DataComponents.HIDE_TOOLTIP, net.minecraft.util.Unit.INSTANCE);
-        *///?}
+        *///?} else
+        //hidden.hideTooltipPart(ItemStack.TooltipPart.ADDITIONAL);
         require(TooltipPreviews.forStack(hidden, false).isEmpty(), "shown on a hidden tooltip");
 
         ItemStack star = star();
@@ -696,7 +910,7 @@ public final class SelfTest {
         var font = Minecraft.getInstance().font;
         MapItemSavedData data = MapItemSavedData.createFresh(0, 0, (byte) 0, false, false, Level.OVERWORLD);
         for (int size : List.of(TooltipsImprovedConfig.MIN_MAP_SIZE, 64, TooltipsImprovedConfig.MAX_MAP_SIZE)) {
-            ClientTooltipComponent map = new TooltipPreviews.MapPreview(new net.minecraft.world.level.saveddata.maps.MapId(1), data, size).renderer();
+            ClientTooltipComponent map = mapRenderer(data, size);
             require(map.getWidth(font) == size && height(map) == size + 2, "map at " + size);
         }
         config.previews.bookLines = 3;
@@ -708,7 +922,7 @@ public final class SelfTest {
         TooltipScroll.reset();
         int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
         int tallSize = screenHeight + 200;
-        ClientTooltipComponent image = new TooltipPreviews.MapPreview(new net.minecraft.world.level.saveddata.maps.MapId(1), data, tallSize).renderer();
+        ClientTooltipComponent image = mapRenderer(data, tallSize);
         List<ClientTooltipComponent> lines = List.of(text(Component.literal("Title")), image, text(Component.literal(longText())));
         List<ClientTooltipComponent> prepared = TooltipLines.prepare(lines, new Object());
         require(prepared.size() > lines.size() && prepared.get(1) == image, "wrapping changed the image");

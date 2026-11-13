@@ -1,8 +1,6 @@
 package com.tooltipsimproved;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -11,18 +9,27 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+//? if >=1.20.5 {
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+//?} else {
+/*import com.google.common.collect.Multimap;
+import net.minecraft.world.entity.LivingEntity;
+*///?}
+
 public final class TooltipComparison {
     private static final String KEY = TooltipsImproved.MOD_ID + ".comparison.";
     /** Vanilla shows amounts to two decimals, so anything smaller would read as a change of 0. */
     private static final double SMALLEST_SHOWN = 0.005;
 
+    //? if >=1.20.5 {
     /** How much one kind of modifier on one attribute differs; vanilla lists each operation on its own line. */
     public record AttributeDelta(Holder<Attribute> attribute, AttributeModifier.Operation operation, double amount) {
         /** The amount as vanilla's tooltips scale it: multipliers as percentages, knockback resistance times ten. */
@@ -46,13 +53,7 @@ public final class TooltipComparison {
         Map<Stat, Double> totals = new LinkedHashMap<>();
         addTotals(totals, hovered, slot, 1);
         addTotals(totals, equipped, slot, -1);
-
-        List<AttributeDelta> deltas = new ArrayList<>();
-        totals.forEach((stat, total) -> {
-            AttributeDelta delta = new AttributeDelta(stat.attribute(), stat.operation(), total);
-            if (Math.abs(delta.displayAmount()) >= SMALLEST_SHOWN) deltas.add(delta);
-        });
-        return deltas;
+        return deltas(totals);
     }
 
     private static void addTotals(Map<Stat, Double> totals, ItemAttributeModifiers modifiers, EquipmentSlot slot, int sign) {
@@ -85,12 +86,69 @@ public final class TooltipComparison {
         modifiers.forEach(EquipmentSlot.MAINHAND, (attribute, modifier) -> inHand[0] = true);
         return inHand[0] ? EquipmentSlot.MAINHAND : null;
     }
+    //?} else {
+    /*/^* How much one kind of modifier on one attribute differs; vanilla lists each operation on its own line. ^/
+    public record AttributeDelta(Attribute attribute, AttributeModifier.Operation operation, double amount) {
+        /^* The amount as vanilla's tooltips scale it: multipliers as percentages, knockback resistance times ten. ^/
+        public double displayAmount() {
+            if (operation != AttributeModifier.Operation.ADDITION) return amount * 100;
+            return attribute == Attributes.KNOCKBACK_RESISTANCE ? amount * 10 : amount;
+        }
+    }
+
+    private record Stat(Attribute attribute, AttributeModifier.Operation operation) {}
+
+    /^*
+     * Compares two items' modifiers for one slot, leaving out changes too small to show.
+     * Amounts are the real change, not differences of the totals vanilla displays, which add the
+     * player's base value only for items that have the stat: a sword's displayed 1.6 Attack Speed
+     * is really 2.4 slower than an empty hand's 4.
+     *
+     * @return one entry per changed attribute and operation, the hovered item's stats first
+     ^/
+    public static List<AttributeDelta> deltas(Multimap<Attribute, AttributeModifier> hovered, Multimap<Attribute, AttributeModifier> equipped) {
+        Map<Stat, Double> totals = new LinkedHashMap<>();
+        addTotals(totals, hovered, 1);
+        addTotals(totals, equipped, -1);
+        return deltas(totals);
+    }
+
+    private static void addTotals(Map<Stat, Double> totals, Multimap<Attribute, AttributeModifier> modifiers, int sign) {
+        modifiers.forEach((attribute, modifier) ->
+            totals.merge(new Stat(attribute, modifier.getOperation()), sign * modifier.getAmount(), Double::sum));
+    }
+
+    /^*
+     * The slot to compare a hovered item in: where it's worn if it's armor, otherwise the main hand
+     * if it has stats there. Items with neither, like a shield, aren't compared.
+     *
+     * @param equipSlot where a player would equip the item, which is the main hand for anything not equippable
+     * @param mainHand the item's modifiers in the main hand
+     * @return the slot, or {@code null} for none
+     ^/
+    static EquipmentSlot slotFor(EquipmentSlot equipSlot, Multimap<Attribute, AttributeModifier> mainHand) {
+        if (equipSlot.getType() == EquipmentSlot.Type.ARMOR) return equipSlot;
+        return mainHand.isEmpty() ? null : EquipmentSlot.MAINHAND;
+    }
+    *///?}
+
+    private static List<AttributeDelta> deltas(Map<Stat, Double> totals) {
+        List<AttributeDelta> deltas = new ArrayList<>();
+        totals.forEach((stat, total) -> {
+            AttributeDelta delta = new AttributeDelta(stat.attribute(), stat.operation(), total);
+            if (Math.abs(delta.displayAmount()) >= SMALLEST_SHOWN) deltas.add(delta);
+        });
+        return deltas;
+    }
 
     public static List<Component> lines(ItemStack hovered, Player player, boolean shift) {
         TooltipsImprovedConfig.Comparison config = TooltipsImprovedConfig.get().comparison;
         if (!config.enabled || player == null) return List.of();
         if (config.showWhen == TooltipsImprovedConfig.ShowWhen.SHIFT_HELD && !shift) return List.of();
+        //? if >=1.20.5 {
         EquipmentSlot slot = slotFor(player.getEquipmentSlotForItem(hovered), modifiers(hovered));
+        //?} else
+        //EquipmentSlot slot = slotFor(LivingEntity.getEquipmentSlotForItem(hovered), hovered.getAttributeModifiers(EquipmentSlot.MAINHAND));
         if (slot == null) return List.of();
         return lines(hovered, player.getItemBySlot(slot), slot);
     }
@@ -100,11 +158,14 @@ public final class TooltipComparison {
         // The very stack being worn or held, not just an identical one
         if (hovered == equipped) return List.of();
         // Deltas would give away the stats of either item that hides them
-        if (!TooltipExtras.shows(hovered, DataComponents.ATTRIBUTE_MODIFIERS) || !TooltipExtras.shows(equipped, DataComponents.ATTRIBUTE_MODIFIERS)) return List.of();
+        if (!TooltipExtras.showsModifiers(hovered) || !TooltipExtras.showsModifiers(equipped)) return List.of();
 
         // TODO: compare enchantments too. Their modifiers aren't in these components, and only
         //  ItemStack#forEachModifier and EnchantmentHelper report them.
+        //? if >=1.20.5 {
         List<AttributeDelta> deltas = deltas(modifiers(hovered), modifiers(equipped), slot);
+        //?} else
+        //List<AttributeDelta> deltas = deltas(hovered.getAttributeModifiers(slot), equipped.getAttributeModifiers(slot));
         if (deltas.isEmpty() && TooltipsImprovedConfig.get().comparison.hideIdentical) return List.of();
 
         List<Component> lines = new ArrayList<>(deltas.size() + 2);
@@ -116,6 +177,7 @@ public final class TooltipComparison {
         return lines;
     }
 
+    //? if >=1.20.5 {
     private static Component line(AttributeDelta delta) {
         double shown = delta.displayAmount();
         boolean increase = shown > 0;
@@ -142,4 +204,15 @@ public final class TooltipComparison {
         return modifiers.modifiers().isEmpty() ? stack.getItem().getDefaultAttributeModifiers() : modifiers;
         *///?}
     }
+    //?} else {
+    /*// Attributes have no sentiment before 1.20.5; vanilla shows every increase in blue and every decrease in red
+    private static Component line(AttributeDelta delta) {
+        double shown = delta.displayAmount();
+        boolean increase = shown > 0;
+        return Component.translatable("attribute.modifier." + (increase ? "plus." : "take.") + delta.operation().toValue(),
+                ItemStack.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(shown)),
+                Component.translatable(delta.attribute().getDescriptionId()))
+            .withStyle(increase ? ChatFormatting.GREEN : ChatFormatting.RED);
+    }
+    *///?}
 }

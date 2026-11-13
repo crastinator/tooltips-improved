@@ -5,12 +5,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.network.chat.Component;
 
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Consumer;
+
+//? if >=1.21 {
+import net.minecraft.client.gui.screens.options.OptionsSubScreen;
+//?} else {
+/*import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.OptionsList;
+import net.minecraft.client.gui.screens.OptionsSubScreen;
+import net.minecraft.network.chat.CommonComponents;
+*///?}
 
 public class TooltipsImprovedScreen extends OptionsSubScreen {
     private static final String KEY = TooltipsImproved.MOD_ID + ".config.";
@@ -22,6 +31,25 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
         super(parent, Minecraft.getInstance().options, Component.translatable(KEY + "title"));
     }
 
+    //? if <1.21 {
+    /*// 1.20.1's option screens build their own list
+    private OptionsList list;
+
+    @Override
+    protected void init() {
+        list = new OptionsList(minecraft, width, height, 32, height - 32, 25);
+        addOptions();
+        addWidget(list);
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).bounds(width / 2 - 100, height - 27, 200, 20).build());
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        basicListRender(graphics, list, mouseX, mouseY, partialTick);
+    }
+    *///?}
+
+    //? if >=1.21
     @Override
     protected void addOptions() {
         section("trims");
@@ -29,7 +57,7 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
 
         section("durability");
         TooltipsImprovedConfig.Durability durability = config.durability;
-        list.addSmall(
+        small(
             toggle("durability.enabled", durability.enabled, value -> durability.enabled = value),
             choice("durability.showWhen", TooltipsImprovedConfig.DurabilityShowWhen.values(), durability.showWhen, value -> durability.showWhen = value),
             choice("durability.format", TooltipsImprovedConfig.DurabilityFormat.values(), durability.format, value -> durability.format = value),
@@ -37,14 +65,14 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
 
         section("comparison");
         TooltipsImprovedConfig.Comparison comparison = config.comparison;
-        list.addSmall(
+        small(
             toggle("comparison.enabled", comparison.enabled, value -> comparison.enabled = value),
             choice("comparison.showWhen", TooltipsImprovedConfig.ShowWhen.values(), comparison.showWhen, value -> comparison.showWhen = value),
             toggle("comparison.hideIdentical", comparison.hideIdentical, value -> comparison.hideIdentical = value));
 
         section("previews");
         TooltipsImprovedConfig.Previews previews = config.previews;
-        list.addSmall(
+        small(
             choice("previews.showWhen", TooltipsImprovedConfig.ShowWhen.values(), previews.showWhen, value -> previews.showWhen = value),
             toggle("previews.books", previews.books, value -> previews.books = value),
             slider("previews.bookLines", TooltipsImprovedConfig.MIN_BOOK_LINES, TooltipsImprovedConfig.MAX_BOOK_LINES, previews.bookLines, value -> previews.bookLines = value),
@@ -54,25 +82,25 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
             toggle("previews.fireworks", previews.fireworks, value -> previews.fireworks = value));
 
         section("wrapping");
-        list.addSmall(
+        small(
             choice("wrap", TooltipsImprovedConfig.WrapMode.values(), config.wrap, value -> config.wrap = value),
             slider("wrapWidth", TooltipsImprovedConfig.MIN_WRAP_WIDTH, TooltipsImprovedConfig.MAX_WRAP_WIDTH, config.wrapWidth, value -> config.wrapWidth = value),
             toggle("unwrapButtonTooltips", config.unwrapButtonTooltips, value -> config.unwrapButtonTooltips = value));
 
         section("placement");
-        list.addSmall(
+        small(
             choice("placement", TooltipsImprovedConfig.Placement.values(), config.placement, value -> config.placement = value),
             toggle("placeAllTooltips", config.placeAllTooltips, value -> config.placeAllTooltips = value),
             toggle("topFirst", config.topFirst, value -> config.topFirst = value),
             toggle("buttonTooltipsBesideButton", config.buttonTooltipsBesideButton, value -> config.buttonTooltipsBesideButton = value));
 
         section("look");
-        list.addSmall(
+        small(
             percent("backgroundOpacity", 0, config.backgroundOpacity, value -> config.backgroundOpacity = value),
             toggle("removeFirstLineGap", config.removeFirstLineGap, value -> config.removeFirstLineGap = value));
 
         section("scrolling");
-        list.addSmall(
+        small(
             toggle("scrollWheel", config.scrollWheel, value -> config.scrollWheel = value),
             toggle("movementKeys", config.movementKeys, value -> config.movementKeys = value),
             toggle("resetWhenHidden", config.resetWhenHidden, value -> config.resetWhenHidden = value),
@@ -87,6 +115,11 @@ public class TooltipsImprovedScreen extends OptionsSubScreen {
     public void removed() {
         super.removed();
         if (changed) config.save();
+    }
+
+    // 1.20.1's list takes an array, not varargs
+    private void small(OptionInstance<?>... options) {
+        list.addSmall(options);
     }
 
     private <T> Consumer<T> track(Consumer<T> onChange) {

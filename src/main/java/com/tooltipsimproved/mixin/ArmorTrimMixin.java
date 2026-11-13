@@ -1,20 +1,25 @@
 package com.tooltipsimproved.mixin;
 
 import com.tooltipsimproved.TooltipsImproved;
-import com.tooltipsimproved.TooltipsImprovedConfig;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.TooltipFlag;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//? if >=1.20.5 {
+import com.tooltipsimproved.TooltipsImprovedConfig;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.TooltipFlag;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Shadow;
 import java.util.function.Consumer;
-
+//?} else {
+/*import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.item.ItemStack;
+import java.util.List;
+*///?}
 //? if >=1.21.5 {
 import net.minecraft.core.component.DataComponentGetter;
 //?}
@@ -30,6 +35,7 @@ import net.minecraft.world.item.armortrim.TrimPattern;
 
 @Mixin(ArmorTrim.class)
 public abstract class ArmorTrimMixin {
+    //? if >=1.20.5 {
     @Shadow @Final private Holder<TrimMaterial> material;
     @Shadow @Final private Holder<TrimPattern> pattern;
     //? if <1.21.5 {
@@ -49,4 +55,12 @@ public abstract class ArmorTrimMixin {
         consumer.accept(TooltipsImproved.trimLine(pattern, material));
         ci.cancel();
     }
+    //?} else {
+    /*// Before 1.20.5 trims are stored on the stack and added by a static method; the stack's
+    // HideFlags are checked before it's called
+    @Inject(method = "appendUpgradeHoverText", at = @At("HEAD"), cancellable = true)
+    private static void tooltipsimproved$foldTrim(ItemStack stack, RegistryAccess registries, List<Component> lines, CallbackInfo ci) {
+        if (TooltipsImproved.foldTrim(ArmorTrim.getTrim(registries, stack), lines)) ci.cancel();
+    }
+    *///?}
 }

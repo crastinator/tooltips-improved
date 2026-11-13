@@ -18,6 +18,11 @@ import net.minecraft.world.item.equipment.trim.TrimPattern;
 /*import net.minecraft.world.item.armortrim.TrimMaterial;
 import net.minecraft.world.item.armortrim.TrimPattern;
 *///?}
+//? if <1.20.5 {
+/*import net.minecraft.world.item.armortrim.ArmorTrim;
+import java.util.List;
+import java.util.Optional;
+*///?}
 
 public class TooltipsImproved {
     public static final String MOD_ID = "tooltipsimproved";
@@ -29,9 +34,11 @@ public class TooltipsImproved {
         LOGGER.info("Tooltips Improved {} loaded on Minecraft {}", VERSION, MINECRAFT);
     }
 
+    //? if >=1.21 {
     public static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
+    //?}
 
     /**
      * Holding Shift shows the vanilla tooltip lines instead of the folded ones. Tooltips built off the
@@ -42,7 +49,7 @@ public class TooltipsImproved {
         //? if >=1.21.9 {
         return net.minecraft.client.Minecraft.getInstance().hasShiftDown();
         //?} else
-        /*return net.minecraft.client.gui.screens.Screen.hasShiftDown();*/
+        //return net.minecraft.client.gui.screens.Screen.hasShiftDown();
     }
 
     public static Component trimLine(Holder<TrimPattern> pattern, Holder<TrimMaterial> material) {
@@ -56,6 +63,15 @@ public class TooltipsImproved {
             .append(shortMaterialName(materialName).withStyle(materialStyle))
             .append(Component.literal(")").withStyle(materialStyle));
     }
+
+    //? if <1.20.5 {
+    /*/^* Adds a trim as one line in place of vanilla's three, returning whether it did. ^/
+    public static boolean foldTrim(Optional<ArmorTrim> trim, List<Component> lines) {
+        if (trim.isEmpty() || !TooltipsImprovedConfig.get().foldTrims || isExpanded()) return false;
+        lines.add(trimLine(trim.get().pattern(), trim.get().material()));
+        return true;
+    }
+    *///?}
 
     /**
      * Vanilla names read "Iron Material", which is redundant inside the brackets.

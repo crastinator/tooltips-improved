@@ -84,10 +84,16 @@ The feature set is inspired by [Better Trim Tooltips](https://modrinth.com/mod/b
 
 | Minecraft | Fabric | NeoForge | Forge |
 |-----------|--------|----------|-------|
+| 1.20.1    | ✔      |          | ✔     |
 | 1.21.1    | ✔      | ✔        | ✔     |
 | 1.21.11   | ✔      | ✔        | ✔     |
 | 26.2      | ✔      | ✔        | ✔     |
 | 26.3      | ✔      | ✔        | ✔     |
+
+On 1.20.1 items store their data as NBT rather than components, which changes a few details:
+
+- Items hide parts of their tooltip with `HideFlags`. The modifiers flag also hides the equipment comparison, and the "additional" flag hides content previews.
+- Equipment comparison lines for items with custom modifiers are listed in no fixed order, as in vanilla's own tooltip.
 
 Built with [Stonecutter](https://stonecutter.kikugie.dev/) from one source tree. Edit `settings.gradle.kts` to add or drop versions, and `stonecutter.properties.toml` for per-version dependency numbers.
 
@@ -111,13 +117,13 @@ Every tooltip goes through one vanilla method, hooked in `mixin/TooltipRenderMix
 Other pieces:
 
 - Added tooltip lines: `mixin/ItemStackMixin` calls `TooltipExtras`, which adds `TooltipDurability` and `TooltipComparison`. `TooltipComparison.deltas` is the pure stat calculation.
-- Previews: `TooltipPreviews` holds a data record and renderer per type, `PreviewCanvas` holds the drawing that changes between versions, and `mixin/ItemStackMixin` and `mixin/ClientTooltipComponentMixin` connect them to vanilla's tooltip images. These use mixins rather than loader events so Fabric API stays unneeded.
+- Previews: `TooltipPreviews` holds a data record and renderer per type, `PreviewCanvas` holds the drawing that changes between versions, and `mixin/ItemStackMixin` and `mixin/ClientTooltipComponentMixin` connect them to vanilla's tooltip images. These use mixins rather than loader events so Fabric API stays unneeded. Forge 1.20.1's Mixin can't hook the static interface method `ClientTooltipComponentMixin` targets, so there `TooltipsImprovedForge.Previews` registers the renderers through Forge's `RegisterClientTooltipComponentFactoriesEvent`.
 - Trim folding: `TooltipsImproved.trimLine` and `mixin/ArmorTrimMixin`.
 - Background opacity: `TooltipBackground` and `mixin/TooltipBackgroundMixin`.
-- Button tooltips: `mixin/WidgetTooltipHolderMixin` and `mixin/TooltipMixin`.
+- Button tooltips: `mixin/WidgetTooltipHolderMixin` (which hooks `AbstractWidget` on 1.20.1) and `mixin/TooltipMixin`.
 - Keybinds: added to the vanilla list by `mixin/OptionsMixin`, so no loader keybind API is needed.
 - Settings screen: `TooltipsImprovedScreen`, built from vanilla's options widgets. It's hooked into Mod Menu by `TooltipsImprovedModMenu` and into the NeoForge and Forge mod lists by `TooltipsImprovedNeoForge` and `TooltipsImprovedForge`.
 
-Hooks use plain Mixin features, except the background hook before 1.21.6, which uses MixinExtras' `@WrapMethod` on Fabric and NeoForge (both ship MixinExtras). Forge 1.21.1 doesn't ship it, so that hook uses `@Inject` there.
+Hooks use plain Mixin features, except the background hook before 1.21.6, which uses MixinExtras' `@WrapMethod` on Fabric and NeoForge (both ship MixinExtras). Forge 1.20.1 and 1.21.1 don't ship it, so that hook uses `@Inject` there.
 
 Stonecutter guide: https://stonecutter.kikugie.dev/wiki/start/

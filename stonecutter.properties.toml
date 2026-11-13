@@ -8,6 +8,24 @@ mod.version = "0.2.0"
 deps.fabric_loader = "0.19.5"
 loomx.loom_version = "1.18-SNAPSHOT"
 
+["1.20.1"]
+# List of releases to be marked compatible on Modrinth/Curseforge
+mod.mc_releases = ["1.20", "1.20.1"]
+# Resource pack format, for the pack.mcmeta Forge needs to load the mod's assets
+mod.resource_format = "15"
+
+
+[fabric."1.20.1"]
+# Mod compatibility range in fabric.mod.json/neoforge.mods.toml
+mod.mc_compat = ">=1.20 <=1.20.1"
+deps.fabric_api = "0.92.12+1.20.1"
+deps.modmenu = "7.2.2"
+
+[forge."1.20.1"]
+mod.mc_compat = "[1.20.1]"
+deps.forge = "47.4.29"
+
+
 ["1.21.1"]
 # List of releases to be marked compatible on Modrinth/Curseforge
 mod.mc_releases = ["1.21", "1.21.1"]

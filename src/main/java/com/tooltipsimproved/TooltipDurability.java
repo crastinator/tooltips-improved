@@ -1,7 +1,6 @@
 package com.tooltipsimproved;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -26,7 +25,7 @@ public final class TooltipDurability {
             case WHEN_DAMAGED -> stack.isDamaged();
             case SHIFT_HELD -> shift;
         };
-        if (!wanted || !TooltipExtras.shows(stack, DataComponents.DAMAGE) || hasVanillaLine(lines)) return null;
+        if (!wanted || !TooltipExtras.showsDamage(stack) || hasVanillaLine(lines)) return null;
 
         int max = stack.getMaxDamage();
         int remaining = Math.max(0, max - stack.getDamageValue());
@@ -48,7 +47,8 @@ public final class TooltipDurability {
 
     private static MutableComponent number(int value, ItemStack stack, TooltipsImprovedConfig.Durability config) {
         MutableComponent number = Component.literal(Integer.toString(value));
-        return config.colorByRemaining ? number.withColor(stack.getBarColor()) : number;
+        int color = stack.getBarColor();
+        return config.colorByRemaining ? number.withStyle(style -> style.withColor(color)) : number;
     }
 
     private static boolean hasVanillaLine(List<Component> lines) {

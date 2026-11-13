@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
@@ -12,16 +11,35 @@ import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.MapItem;
-import net.minecraft.world.item.component.FireworkExplosion;
-import net.minecraft.world.item.component.Fireworks;
-import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 
 import java.util.List;
 import java.util.Optional;
+
+//? if >=1.20.5 {
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
+import net.minecraft.world.level.saveddata.maps.MapId;
+//?} else {
+/*import com.mojang.datafixers.util.Pair;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
+import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.world.item.FireworkRocketItem;
+import net.minecraft.world.item.FireworkStarItem;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.world.item.WrittenBookItem;
+import net.minecraft.world.level.block.entity.BannerBlockEntity;
+import net.minecraft.world.level.block.entity.BannerPattern;
+import java.util.ArrayList;
+*///?}
 
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -103,7 +121,8 @@ public final class TooltipPreviews {
 
     // Splitting a page into lines is too slow for every frame and the hovered book rarely changes.
     // Compared by identity as a stack keeps the same component, and comparing pages by value is slow too.
-    private static Component splitPage;
+    // Before 1.20.5 a page is the JSON text stored on the stack, which is quick to compare
+    private static Object splitPage;
     private static SplitSettings splitSettings;
     private static List<FormattedCharSequence> splitLines = List.of();
 
@@ -138,23 +157,53 @@ public final class TooltipPreviews {
     }
 
     private static Preview book(ItemStack stack, int maxLines) {
+        Minecraft minecraft = Minecraft.getInstance();
+        //? if >=1.20.5 {
         WrittenBookContent content = stack.get(DataComponents.WRITTEN_BOOK_CONTENT);
         if (content == null || !TooltipExtras.shows(stack, DataComponents.WRITTEN_BOOK_CONTENT)) return null;
-        Minecraft minecraft = Minecraft.getInstance();
         List<Component> pages = content.getPages(minecraft.isTextFilteringEnabled());
         if (pages.isEmpty()) return null;
 
         Component page = pages.get(0);
+        boolean japaneseGlyphs = minecraft.options.japaneseGlyphVariants().get();
+        boolean samePage = page == splitPage;
+        //?} else {
+        /*CompoundTag tag = stack.getTag();
+        if (!(stack.getItem() instanceof WrittenBookItem) || tag == null || !TooltipExtras.shows(stack, ItemStack.TooltipPart.ADDITIONAL)) return null;
+        // Picks the filtered pages when the player has text filtering on, as the book screen does
+        List<String> pages = new ArrayList<>();
+        BookViewScreen.loadPages(tag, pages::add);
+        if (pages.isEmpty()) return null;
+
+        String page = pages.get(0);
+        boolean japaneseGlyphs = false;
+        boolean samePage = page.equals(splitPage);
+        *///?}
         SplitSettings settings = new SplitSettings(maxLines, minecraft.options.forceUnicodeFont().get(),
-            minecraft.options.japaneseGlyphVariants().get(), minecraft.getLanguageManager().getSelected());
-        if (page != splitPage || !settings.equals(splitSettings)) {
+            japaneseGlyphs, minecraft.getLanguageManager().getSelected());
+        if (!samePage || !settings.equals(splitSettings)) {
+            //? if >=1.20.5 {
             List<FormattedCharSequence> lines = minecraft.font.split(page, PAGE_TEXT_WIDTH);
+            //?} else
+            //List<FormattedCharSequence> lines = minecraft.font.split(pageText(page), PAGE_TEXT_WIDTH);
             splitLines = List.copyOf(lines.subList(0, Math.min(lines.size(), maxLines)));
             splitPage = page;
             splitSettings = settings;
         }
         return splitLines.isEmpty() ? null : new BookPreview(splitLines);
     }
+
+    //? if <1.20.5 {
+    /*/^* A stored page as the book screen reads it: JSON text, or plain text if it isn't valid JSON. ^/
+    private static FormattedText pageText(String page) {
+        try {
+            FormattedText text = Component.Serializer.fromJson(page);
+            if (text != null) return text;
+        } catch (Exception ignored) {
+        }
+        return FormattedText.of(page);
+    }
+    *///?}
 
     /** Forgets split pages, e.g. when a screen closes, as the font may change before the next one. */
     public static void clearCache() {
@@ -163,7 +212,10 @@ public final class TooltipPreviews {
     }
 
     /** @param data the map's contents, {@code null} when the server hasn't sent them */
+    //? if >=1.20.5 {
     record MapPreview(MapId id, MapItemSavedData data, int size) implements Preview {
+    //?} else
+    //record MapPreview(int id, MapItemSavedData data, int size) implements Preview {
         private static final int NOT_LOADED_COLOR = 0xFFAAAAAA;
         private static final Component NOT_LOADED = Component.translatable(TooltipsImproved.MOD_ID + ".preview.map_not_loaded");
 
@@ -190,14 +242,22 @@ public final class TooltipPreviews {
     }
 
     private static Preview map(ItemStack stack, int size) {
+        //? if >=1.20.5 {
         MapId id = stack.get(DataComponents.MAP_ID);
         if (id == null || !(stack.getItem() instanceof MapItem) || !TooltipExtras.shows(stack, DataComponents.MAP_ID)) return null;
+        //?} else {
+        /*Integer id = MapItem.getMapId(stack);
+        if (id == null || !(stack.getItem() instanceof MapItem) || !TooltipExtras.shows(stack, ItemStack.TooltipPart.ADDITIONAL)) return null;
+        *///?}
         // The client only knows maps it's been sent: held, in a frame nearby, or recently viewed
         Level level = Minecraft.getInstance().level;
         return new MapPreview(id, level == null ? null : MapItem.getSavedData(id, level), size);
     }
 
+    //? if >=1.20.5 {
     record BannerPreview(DyeColor base, BannerPatternLayers layers) implements Preview {
+    //?} else
+    //record BannerPreview(DyeColor base, List<Pair<Holder<BannerPattern>, DyeColor>> layers) implements Preview {
         @Override
         public ClientTooltipComponent renderer() {
             return new Renderer() {
@@ -219,6 +279,7 @@ public final class TooltipPreviews {
         }
     }
 
+    //? if >=1.20.5 {
     private static Preview banner(ItemStack stack) {
         BannerPatternLayers layers = stack.get(DataComponents.BANNER_PATTERNS);
         // A plain banner shows nothing its icon doesn't
@@ -226,6 +287,19 @@ public final class TooltipPreviews {
         DyeColor base = stack.getItem() instanceof BannerItem banner ? banner.getColor() : stack.getOrDefault(DataComponents.BASE_COLOR, DyeColor.WHITE);
         return new BannerPreview(base, layers);
     }
+    //?} else {
+    /*private static Preview banner(ItemStack stack) {
+        DyeColor base;
+        if (stack.getItem() instanceof BannerItem banner) base = banner.getColor();
+        else if (stack.getItem() instanceof ShieldItem) base = ShieldItem.getColor(stack);
+        else return null;
+        ListTag patterns = BannerBlockEntity.getItemPatterns(stack);
+        // A plain banner shows nothing its icon doesn't
+        if (patterns == null || patterns.isEmpty() || !TooltipExtras.shows(stack, ItemStack.TooltipPart.ADDITIONAL)) return null;
+        // Includes the base color as the first layer
+        return new BannerPreview(base, BannerBlockEntity.createPatterns(base, patterns));
+    }
+    *///?}
 
     private static final int ICON_SIZE = 7, SWATCH_SIZE = 5, SWATCH_GAP = 1, FADE_GAP = 4, ROW_GAP = 1;
     // Commands can make these as long as they like; survival tops out well below both
@@ -269,7 +343,7 @@ public final class TooltipPreviews {
 
         private static void drawRow(PreviewCanvas canvas, FireworkExplosion explosion, int x, int y) {
             IntList colors = explosion.colors();
-            drawIcon(canvas, explosion.shape(), colors.isEmpty() ? DEFAULT_ICON_COLOR : opaque(colors.getInt(0)), x, y);
+            drawIcon(canvas, icon(explosion.shape()), colors.isEmpty() ? DEFAULT_ICON_COLOR : opaque(colors.getInt(0)), x, y);
             int at = drawSwatches(canvas, colors, x + ICON_SIZE + SWATCH_GAP, y);
             if (explosion.fadeColors().isEmpty()) return;
             canvas.fill(at, y + ICON_SIZE / 2, at + FADE_GAP - SWATCH_GAP, y + ICON_SIZE / 2 + 1, FADE_MARK_COLOR);
@@ -286,8 +360,7 @@ public final class TooltipPreviews {
             return x;
         }
 
-        private static void drawIcon(PreviewCanvas canvas, FireworkExplosion.Shape shape, int color, int x, int y) {
-            String[] icon = icon(shape);
+        private static void drawIcon(PreviewCanvas canvas, String[] icon, int color, int x, int y) {
             for (int row = 0; row < ICON_SIZE; row++) {
                 for (int column = 0; column < ICON_SIZE; column++) {
                     if (icon[row].charAt(column) == '#') canvas.fill(x + column, y + row, x + column + 1, y + row + 1, color);
@@ -299,7 +372,10 @@ public final class TooltipPreviews {
             return 0xFF000000 | rgb;
         }
 
+        //? if >=1.20.5 {
         private static String[] icon(FireworkExplosion.Shape shape) {
+        //?} else
+        //private static String[] icon(FireworkRocketItem.Shape shape) {
             return switch (shape) {
                 case SMALL_BALL -> SMALL_BALL_ICON;
                 case LARGE_BALL -> LARGE_BALL_ICON;
@@ -358,6 +434,7 @@ public final class TooltipPreviews {
         "#..#..#",
     };
 
+    //? if >=1.20.5 {
     private static Preview fireworks(ItemStack stack) {
         FireworkExplosion star = stack.get(DataComponents.FIREWORK_EXPLOSION);
         if (star != null && TooltipExtras.shows(stack, DataComponents.FIREWORK_EXPLOSION)) return new FireworkPreview(List.of(star));
@@ -366,4 +443,33 @@ public final class TooltipPreviews {
         List<FireworkExplosion> explosions = rocket.explosions();
         return new FireworkPreview(explosions.subList(0, Math.min(explosions.size(), MAX_ROWS)));
     }
+    //?} else {
+    /*/^* What a firework star or rocket stores about one explosion, in the shape newer versions have as a component. ^/
+    record FireworkExplosion(FireworkRocketItem.Shape shape, IntList colors, IntList fadeColors) {
+        static FireworkExplosion read(CompoundTag tag) {
+            //? if forge {
+            /^// Also reads shapes that other mods add
+            FireworkRocketItem.Shape shape = FireworkRocketItem.Shape.getShape(tag);
+            ^///?} else
+            FireworkRocketItem.Shape shape = FireworkRocketItem.Shape.byId(tag.getByte(FireworkRocketItem.TAG_EXPLOSION_TYPE));
+            return new FireworkExplosion(shape,
+                IntList.of(tag.getIntArray(FireworkRocketItem.TAG_EXPLOSION_COLORS)),
+                IntList.of(tag.getIntArray(FireworkRocketItem.TAG_EXPLOSION_FADECOLORS)));
+        }
+    }
+
+    private static Preview fireworks(ItemStack stack) {
+        if (!TooltipExtras.shows(stack, ItemStack.TooltipPart.ADDITIONAL)) return null;
+        if (stack.getItem() instanceof FireworkStarItem) {
+            CompoundTag star = stack.getTagElement(FireworkRocketItem.TAG_EXPLOSION);
+            return star == null ? null : new FireworkPreview(List.of(FireworkExplosion.read(star)));
+        }
+        CompoundTag rocket = stack.getTagElement(FireworkRocketItem.TAG_FIREWORKS);
+        if (rocket == null || !(stack.getItem() instanceof FireworkRocketItem)) return null;
+        ListTag tags = rocket.getList(FireworkRocketItem.TAG_EXPLOSIONS, Tag.TAG_COMPOUND);
+        List<FireworkExplosion> explosions = new ArrayList<>();
+        for (int i = 0; i < Math.min(tags.size(), MAX_ROWS); i++) explosions.add(FireworkExplosion.read(tags.getCompound(i)));
+        return explosions.isEmpty() ? null : new FireworkPreview(explosions);
+    }
+    *///?}
 }
