@@ -30,10 +30,11 @@ public final class TooltipDurability {
         int max = stack.getMaxDamage();
         int remaining = Math.max(0, max - stack.getDamageValue());
         int percent = percent(remaining, max);
+        Integer color = config.colorByRemaining ? stack.getBarColor() : null;
         Object[] args = switch (config.format) {
-            case FRACTION -> new Object[] {number(remaining, stack, config), number(max, stack, config)};
-            case PERCENT -> new Object[] {number(percent, stack, config)};
-            case BOTH -> new Object[] {number(remaining, stack, config), number(max, stack, config), number(percent, stack, config)};
+            case FRACTION -> new Object[] {number(remaining, color), number(max, color)};
+            case PERCENT -> new Object[] {number(percent, color)};
+            case BOTH -> new Object[] {number(remaining, color), number(max, color), number(percent, color)};
         };
         return Component.translatable(KEY + config.format.name().toLowerCase(java.util.Locale.ROOT), args).withStyle(ChatFormatting.GRAY);
     }
@@ -45,10 +46,10 @@ public final class TooltipDurability {
         return Math.max(1, Math.min(99, Math.round(remaining * 100f / max)));
     }
 
-    private static MutableComponent number(int value, ItemStack stack, TooltipsImprovedConfig.Durability config) {
+    /** @param color the numbers' color, or {@code null} to leave them uncolored */
+    private static MutableComponent number(int value, Integer color) {
         MutableComponent number = Component.literal(Integer.toString(value));
-        int color = stack.getBarColor();
-        return config.colorByRemaining ? number.withStyle(style -> style.withColor(color)) : number;
+        return color == null ? number : number.withStyle(style -> style.withColor(color));
     }
 
     private static boolean hasVanillaLine(List<Component> lines) {

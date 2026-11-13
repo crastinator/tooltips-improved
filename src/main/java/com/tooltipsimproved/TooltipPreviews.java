@@ -26,7 +26,6 @@ import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.saveddata.maps.MapId;
 //?} else {
 /*import com.mojang.datafixers.util.Pair;
-import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -55,8 +54,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 public final class TooltipPreviews {
     private static final int BOTTOM_GAP = 2;
 
-    /** A preview's data; {@code mixin/ClientTooltipComponentMixin} turns it into what's drawn. */
-    public interface Preview extends TooltipComponent {
+    /**
+     * A preview's data; {@code mixin/ClientTooltipComponentMixin} turns it into what's drawn. Sealed so
+     * Forge 1.20.1, which looks renderers up by exact class, can register every kind.
+     */
+    public sealed interface Preview extends TooltipComponent permits BookPreview, MapPreview, BannerPreview, FireworkPreview {
         ClientTooltipComponent renderer();
     }
 
@@ -170,12 +172,15 @@ public final class TooltipPreviews {
         //?} else {
         /*CompoundTag tag = stack.getTag();
         if (!(stack.getItem() instanceof WrittenBookItem) || tag == null || !TooltipExtras.shows(stack, ItemStack.TooltipPart.ADDITIONAL)) return null;
-        // Picks the filtered pages when the player has text filtering on, as the book screen does
-        List<String> pages = new ArrayList<>();
-        BookViewScreen.loadPages(tag, pages::add);
+        ListTag pages = tag.getList(WrittenBookItem.TAG_PAGES, Tag.TAG_STRING);
         if (pages.isEmpty()) return null;
 
-        String page = pages.get(0);
+        // The filtered text when the player has text filtering on, as the book screen picks it
+        String page = pages.getString(0);
+        if (minecraft.isTextFilteringEnabled() && tag.contains(WrittenBookItem.TAG_FILTERED_PAGES, Tag.TAG_COMPOUND)) {
+            CompoundTag filtered = tag.getCompound(WrittenBookItem.TAG_FILTERED_PAGES);
+            if (filtered.contains("0")) page = filtered.getString("0");
+        }
         boolean japaneseGlyphs = false;
         boolean samePage = page.equals(splitPage);
         *///?}
